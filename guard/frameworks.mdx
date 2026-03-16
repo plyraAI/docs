@@ -15,7 +15,7 @@ icon: "plug"
 ```python
 from langchain_core.messages import ToolMessage
 from plyra_guard import ActionGuard, ActionIntent
-from plyra_guard.exceptions import ExecutionBlockedError
+from plyra_guard.exceptions import ExecutionBlockedError, ActionEscalatedError
 
 guard = ActionGuard.from_config("guard_config.yaml")
 TOOLS = {
@@ -44,7 +44,9 @@ def guarded_tool_node(state):
             else:
                 content = TOOLS[tool_name].invoke(args)
         except ExecutionBlockedError as e:
-            content = f"[BLOCKED] {e.reason}"
+            content = f"[BLOCKED] {e.what_happened}"
+        except ActionEscalatedError as e:
+            content = f"[ESCALATED — awaiting approval] {e.reason}"
         except Exception as e:
             content = f"[ERROR] {e}"
 
@@ -104,15 +106,19 @@ natively.
 safe_tools = guard.wrap(tool_definitions)
 ```
 
-## Plain Python
+## Handling verdicts
 
 ```python
-from plyra_guard import ActionGuard, RiskLevel
+from plyra_guard.exceptions import ExecutionBlockedError, ActionEscalatedError
 
-guard = ActionGuard.default()
-
-@guard.protect("my.action", risk_level=RiskLevel.MEDIUM)
-def my_function(arg: str) -> str: ...
+try:
+    my_function("arg")
+except ExecutionBlockedError as e:
+    # Action was blocked by policy
+    print(e.what_happened, e.how_to_fix)
+except ActionEscalatedError as e:
+    # Action requires human approval before proceeding
+    print(f"Escalated to: {e.escalate_to}")
 ```
 
 ## Framework support matrix

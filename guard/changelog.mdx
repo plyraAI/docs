@@ -1,0 +1,32 @@
+---
+title: "Changelog"
+description: "Release history for plyra-guard"
+icon: "clock-rotate-left"
+---
+
+## v0.1.9
+
+*Current release*
+
+- Multi-agent trust ledger with `TrustLevel` enum
+- `guard.rollback_task()` for batch rollback across agents
+- `RollbackReport` with structured `success`, `rolled_back`, `failed` fields
+- `GuardMetrics.to_prometheus()` — Prometheus text format export
+- `WebhookExporter` — POST audit entries to any URL
+- `guard.explain()` — dry-run with human-readable pipeline walkthrough
+- `guard.explain_async()` — async version
+- Improved `ExecutionBlockedError` with `what_happened`, `policy_triggered`,
+  `how_to_fix` structured fields
+- Python 3.12 and 3.13 support confirmed
+
+## v0.1.x series
+
+Early beta releases establishing the core `ActionGuard`, policy engine,
+exporter system, and LangGraph integration patterns.
+
+---
+
+<Note>
+  plyra-guard follows semantic versioning. The API is stable in beta but
+  minor breaking changes may occur before v1.0 with deprecation notices.
+</Note>

@@ -52,7 +52,7 @@
           },
           {
             "group": "Reference",
-            "pages": ["guard/api-reference"]
+            "pages": ["guard/api-reference", "guard/changelog"]
           }
         ]
       }

@@ -36,6 +36,17 @@ guard.serve(host="0.0.0.0", port=8080)
   development. Lock it down before exposing the dashboard beyond localhost.
 </Warning>
 
+<Note>
+  Run `plyra-guard serve` to launch the dashboard at
+  [localhost:8765](http://localhost:8765). The dashboard shows a live
+  action feed, policy hit rates, session replay, and full block context
+  — no configuration required beyond the sidecar install.
+</Note>
+
+{/* Screenshot: replace with /images/guard-dashboard.png
+    To capture: run plyra-guard serve, open localhost:8765,
+    screenshot the live action feed view at 1600×900 */}
+
 ## Query the audit log
 
 ```python

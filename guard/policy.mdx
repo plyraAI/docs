@@ -141,3 +141,43 @@ print(result.reason)     # "System config is off-limits"
   `guard.evaluate()` takes an `ActionIntent` object, not a plain string.
   See the [API reference](/guard/api-reference) for all `ActionIntent` fields.
 </Note>
+
+## Real-world policy example
+
+A policy for a database agent that can read freely but must escalate
+any destructive operation and block schema changes entirely:
+
+```yaml
+version: "1.0"
+
+global:
+  default_verdict: BLOCK
+
+policies:
+  - name: allow-select
+    action_types: ["db.query", "db.execute"]
+    condition: 'str(parameters.get("sql", "")).strip().upper().startswith("SELECT")'
+    verdict: ALLOW
+
+  - name: escalate-delete
+    action_types: ["db.execute"]
+    condition: |
+      any(kw in str(parameters.get("sql", "")).upper()
+          for kw in ["DELETE", "UPDATE", "TRUNCATE"])
+    verdict: ESCALATE
+    message: "Destructive DB operation requires human approval"
+    escalate_to: "human"
+
+  - name: block-schema
+    action_types: ["db.execute"]
+    condition: |
+      any(kw in str(parameters.get("sql", "")).upper()
+          for kw in ["DROP", "ALTER", "CREATE TABLE", "RENAME"])
+    verdict: BLOCK
+    message: "Schema changes are not permitted by agents"
+```
+
+Rules are evaluated top to bottom. A `SELECT` query matches the first rule
+and is allowed immediately. A `DELETE` matches the second rule and is paused
+for approval. A `DROP TABLE` matches the third rule and is blocked outright.
+Any query that matches none of the rules hits the `default_verdict: BLOCK`.

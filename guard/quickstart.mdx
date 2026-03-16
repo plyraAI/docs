@@ -40,6 +40,26 @@ delete_file("/etc/passwd")       # Verdict: BLOCK — ExecutionBlockedError rais
   happened: `what_happened`, `policy_triggered`, and `how_to_fix`.
   Catch it to handle blocks gracefully in your agent loop.
 </Note>
+
+## Handle blocked calls
+
+```python
+from plyra_guard.exceptions import ExecutionBlockedError, ActionEscalatedError
+
+try:
+    delete_file("/etc/passwd")
+except ExecutionBlockedError as e:
+    print(e.what_happened)      # "File path matches block rule: system config"
+    print(e.policy_triggered)   # "block-system-config"
+    print(e.how_to_fix)         # "Use a path under /tmp/ or update your policy"
+except ActionEscalatedError as e:
+    print(e.reason)             # Why escalation was triggered
+    print(e.escalate_to)        # Where the escalation was routed
+```
+
+Both exceptions carry structured context. Your agent loop should catch them
+and decide whether to retry with a different approach, surface to the user,
+or abort the task.
 ```
 
 ## Load a policy file
