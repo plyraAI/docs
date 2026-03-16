@@ -1,0 +1,101 @@
+---
+title: "Quickstart"
+description: "Protect your first tool call in 60 seconds"
+icon: "rocket"
+---
+
+## Install
+
+<CodeGroup>
+```bash pip
+pip install plyra-guard
+```
+```bash uv
+uv add plyra-guard
+```
+</CodeGroup>
+
+## Protect a tool
+
+```python
+from plyra_guard import ActionGuard, RiskLevel
+
+guard = ActionGuard.default()
+
+@guard.protect("file.delete", risk_level=RiskLevel.HIGH)
+def delete_file(path: str) -> str:
+    import os
+    os.remove(path)
+    return f"Deleted {path}"
+```
+
+When the agent calls `delete_file`, plyra-guard intercepts first:
+
+```python
+delete_file("/tmp/report.txt")   # Verdict: ALLOW — executes normally
+delete_file("/etc/passwd")       # Verdict: BLOCK — ExecutionBlockedError raised
+```
+
+## Load a policy file
+
+Create `guard_config.yaml` in your project root:
+
+```yaml
+version: "1.0"
+
+global:
+  default_verdict: BLOCK
+
+policies:
+  - name: block-env-files
+    action_types: ["*"]
+    condition: '".env" in parameters.get("path", "")'
+    verdict: BLOCK
+    message: "No .env access"
+
+  - name: block-system-config
+    action_types: ["*"]
+    condition: 'parameters.get("path", "").startswith("/etc/")'
+    verdict: BLOCK
+    message: "System config is off-limits"
+
+  - name: allow-tmp
+    action_types: ["*"]
+    condition: 'parameters.get("path", "").startswith("/tmp/")'
+    verdict: ALLOW
+
+  - name: escalate-schema-changes
+    action_types: ["*"]
+    condition: '"DROP TABLE" in str(parameters)'
+    verdict: ESCALATE
+    message: "Schema changes require human approval"
+```
+
+```python
+guard = ActionGuard.from_config("guard_config.yaml")
+```
+
+## Wrap a list of tools
+
+```python
+safe_tools = guard.wrap([read_file, write_file, delete_file])
+```
+
+Pass `safe_tools` to any framework that accepts a tool list.
+
+## Launch the dashboard
+
+```bash
+pip install "plyra-guard[sidecar]"
+plyra-guard serve
+# → http://localhost:8765
+```
+
+<CardGroup cols={2}>
+  <Card title="Policy reference" href="/guard/policy" icon="file-code">
+    Learn the full rule syntax.
+  </Card>
+  <Card title="Framework integrations" href="/guard/frameworks" icon="plug">
+    LangGraph, AutoGen, CrewAI, and more.
+  </Card>
+</CardGroup>

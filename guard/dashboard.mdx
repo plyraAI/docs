@@ -1,0 +1,98 @@
+---
+title: "Dashboard"
+description: "Real-time action feed and policy analytics at localhost:8765"
+icon: "gauge"
+---
+
+## Launch
+
+```bash
+pip install "plyra-guard[sidecar]"
+plyra-guard serve
+# → http://localhost:8765
+```
+
+Or start from code:
+
+```python
+guard.serve(host="0.0.0.0", port=8080)
+```
+
+<Note>
+  The default sidecar port in config is `8080`. The CLI command `plyra-guard serve`
+  uses port `8765`. You can override both via the `sidecar` section in your YAML config.
+</Note>
+
+## What you can see
+
+- **Live action feed** — every tool call as it happens, with verdict and latency
+- **Policy hit rates** — which rules fire most
+- **Session replay** — reconstruct any agent session from the audit log
+- **Block details** — full context on every blocked call: action type, intent,
+  matched rule, and reason
+
+<Warning>
+  The default CORS setting (`allow_origins=["*"]`) is fine for local
+  development. Lock it down before exposing the dashboard beyond localhost.
+</Warning>
+
+## Query the audit log
+
+```python
+from plyra_guard import AuditFilter, Verdict
+
+# Get the 20 most recent blocked actions
+entries = guard.get_audit_log(AuditFilter(
+    verdict=Verdict.BLOCK,
+    limit=20,
+))
+
+for entry in entries:
+    print(f"{entry.action_type} | {entry.verdict.value} | {entry.duration_ms}ms")
+```
+
+### AuditFilter fields
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `agent_id` | `str \| None` | `None` | Filter by agent |
+| `task_id` | `str \| None` | `None` | Filter by task |
+| `verdict` | `Verdict \| None` | `None` | Filter by verdict type |
+| `action_type` | `str \| None` | `None` | Filter by action type |
+| `from_time` | `datetime \| None` | `None` | Start of time range |
+| `to_time` | `datetime \| None` | `None` | End of time range |
+| `limit` | `int` | `100` | Max entries to return |
+
+## Explain a decision
+
+```python
+from plyra_guard import ActionIntent
+
+intent = ActionIntent(
+    action_type="file.delete",
+    tool_name="delete_file",
+    parameters={"path": "/etc/passwd"},
+    agent_id="default",
+)
+
+explanation = guard.explain(intent)
+print(explanation)
+# Human-readable description of which evaluators ran,
+# which rule matched, and why the verdict was reached
+```
+
+## Metrics snapshot
+
+```python
+metrics = guard.get_metrics()
+print(f"Total: {metrics.total_actions}")
+print(f"Blocked: {metrics.blocked_actions}")
+print(f"Avg risk: {metrics.avg_risk_score:.2f}")
+print(f"Avg latency: {metrics.avg_duration_ms:.1f}ms")
+```
+
+Export as Prometheus text format:
+
+```python
+print(metrics.to_prometheus())
+```

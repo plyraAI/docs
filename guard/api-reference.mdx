@@ -1,0 +1,622 @@
+---
+title: "API reference"
+description: "Complete reference for the plyra-guard Python API"
+icon: "code"
+---
+
+## ActionGuard
+
+The main entry point. Assembles the evaluation pipeline, audit log,
+rollback system, and multi-agent trust ledger.
+
+### Constructor
+
+```python
+from plyra_guard import ActionGuard
+
+guard = ActionGuard(config=None)
+```
+
+<ParamField path="config" type="GuardConfig | None">
+  A `GuardConfig` Pydantic model. If `None`, uses `GuardConfig()` defaults.
+</ParamField>
+
+### ActionGuard.default()
+
+Create an instance with sensible defaults. No config file needed — good for
+quick starts and testing.
+
+```python
+guard = ActionGuard.default()
+```
+
+### ActionGuard.from\_config()
+
+Create an instance from a YAML config file.
+
+```python
+guard = ActionGuard.from_config("guard_config.yaml")
+```
+
+<ParamField path="path" type="str" required>
+  Path to a YAML configuration file.
+</ParamField>
+
+<ResponseField name="return" type="ActionGuard">
+  A configured `ActionGuard` instance.
+</ResponseField>
+
+---
+
+## guard.protect()
+
+Decorator to protect a function with ActionGuard.
+
+```python
+@guard.protect("file.delete", risk_level=RiskLevel.HIGH)
+def delete_file(path: str) -> str:
+    import os
+    os.remove(path)
+    return f"Deleted {path}"
+```
+
+<ParamField path="action_type" type="str" required>
+  Hierarchical action descriptor (e.g. `"file.delete"`, `"db.execute"`).
+</ParamField>
+
+<ParamField path="risk_level" type="RiskLevel" default="RiskLevel.MEDIUM">
+  Baseline risk level for this action. One of `LOW`, `MEDIUM`, `HIGH`, `CRITICAL`.
+</ParamField>
+
+<ParamField path="rollback" type="bool" default="True">
+  Whether to capture a snapshot before execution for rollback support.
+</ParamField>
+
+<ParamField path="tags" type="list[str] | None" default="None">
+  Optional tags for categorization and filtering.
+</ParamField>
+
+<ResponseField name="return" type="Callable">
+  Decorator function. The wrapped function gains `_plyra_guard_protected = True`.
+</ResponseField>
+
+---
+
+## guard.wrap()
+
+Wrap framework-native tools with ActionGuard protection. Auto-detects the
+framework and routes to the appropriate adapter.
+
+```python
+safe_tools = guard.wrap([read_file, write_file, delete_file])
+```
+
+<ParamField path="tools" type="list[Any]" required>
+  List of framework-native tool objects (LangChain tools, plain functions, etc.).
+</ParamField>
+
+<ResponseField name="return" type="list[Any]">
+  Wrapped tools in their native format.
+</ResponseField>
+
+<Warning>
+  Do not use `guard.wrap()` with LangGraph. See
+  [framework integrations](/guard/frameworks) for the required pattern.
+</Warning>
+
+---
+
+## guard.evaluate()
+
+Evaluate an `ActionIntent` without executing (dry-run).
+
+```python
+result = guard.evaluate(intent)
+```
+
+<ParamField path="intent" type="ActionIntent" required>
+  The action to evaluate.
+</ParamField>
+
+<ResponseField name="return" type="EvaluatorResult">
+  The final result with the most restrictive verdict from all evaluators.
+</ResponseField>
+
+### guard.evaluate\_async()
+
+Async version. Runs the evaluation pipeline in a thread to avoid blocking
+the event loop.
+
+```python
+result = await guard.evaluate_async(intent)
+```
+
+---
+
+## guard.explain()
+
+Run the full evaluation pipeline in dry-run mode and return a rich,
+human-readable explanation string. Never executes the action.
+
+```python
+explanation = guard.explain(intent)
+print(explanation)
+```
+
+<ParamField path="intent" type="ActionIntent" required>
+  The action to explain.
+</ParamField>
+
+<ResponseField name="return" type="str">
+  Human-readable explanation of which evaluators ran and why.
+</ResponseField>
+
+### guard.explain\_async()
+
+Async version of `explain()`.
+
+---
+
+## guard.get\_audit\_log()
+
+Query the audit log with optional filters.
+
+```python
+entries = guard.get_audit_log(AuditFilter(verdict=Verdict.BLOCK, limit=20))
+```
+
+<ParamField path="filters" type="AuditFilter | None" default="None">
+  Optional filter criteria. If `None`, returns all entries up to the default limit.
+</ParamField>
+
+<ResponseField name="return" type="list[AuditEntry]">
+  Matching audit entries, newest first.
+</ResponseField>
+
+---
+
+## guard.get\_metrics()
+
+Get a snapshot of aggregate metrics.
+
+```python
+metrics = guard.get_metrics()
+print(metrics.to_prometheus())
+```
+
+<ResponseField name="return" type="GuardMetrics">
+  Aggregate statistics for all actions evaluated by this guard instance.
+</ResponseField>
+
+---
+
+## guard.add\_exporter()
+
+Register an audit log exporter. Exporters receive every `AuditEntry` as it
+is written.
+
+```python
+from plyra_guard.observability.exporters import OTelExporter
+
+guard.add_exporter(OTelExporter())
+```
+
+<ParamField path="exporter" type="Any" required>
+  An object implementing `export(entry: AuditEntry) -> None`.
+</ParamField>
+
+---
+
+## guard.register\_agent()
+
+Register an agent with a trust level for multi-agent systems.
+
+```python
+guard.register_agent("researcher", trust_level=TrustLevel.PEER)
+```
+
+<ParamField path="agent_id" type="str" required>
+  Unique agent identifier.
+</ParamField>
+
+<ParamField path="trust_level" type="TrustLevel" required>
+  Trust classification for this agent.
+</ParamField>
+
+---
+
+## guard.rollback()
+
+Roll back a single action by its ID.
+
+```python
+success = guard.rollback("action-uuid-here")
+```
+
+<ParamField path="action_id" type="str" required>
+  The `action_id` from an `ActionIntent` or `AuditEntry`.
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  `True` if rollback succeeded.
+</ResponseField>
+
+### guard.rollback\_last()
+
+Roll back the last N actions.
+
+```python
+results = guard.rollback_last(n=3, agent_id="researcher")
+```
+
+<ParamField path="n" type="int" default="1">
+  Number of actions to roll back.
+</ParamField>
+
+<ParamField path="agent_id" type="str | None" default="None">
+  Optionally filter to one agent.
+</ParamField>
+
+<ResponseField name="return" type="list[bool]">
+  Per-action rollback results.
+</ResponseField>
+
+### guard.rollback\_task()
+
+Roll back all actions for a task across all agents.
+
+```python
+report = guard.rollback_task("task-uuid")
+print(report.success)        # True if all rolled back
+print(report.rolled_back)    # list of action IDs
+print(report.failed)         # list of action IDs that failed
+```
+
+<ParamField path="task_id" type="str" required>
+  The task identifier.
+</ParamField>
+
+<ResponseField name="return" type="RollbackReport">
+  Summary with `task_id`, `total_actions`, `rolled_back`, `failed`, `skipped` lists.
+</ResponseField>
+
+---
+
+## guard.serve()
+
+Start the HTTP sidecar server (dashboard + REST API).
+
+```python
+guard.serve(host="0.0.0.0", port=8080)
+```
+
+<ParamField path="host" type="str" default='"0.0.0.0"'>
+  Bind address.
+</ParamField>
+
+<ParamField path="port" type="int" default="8080">
+  Port number.
+</ParamField>
+
+<Note>
+  Requires `pip install "plyra-guard[sidecar]"`. Raises `ImportError` if
+  FastAPI or uvicorn are not installed.
+</Note>
+
+---
+
+## Data classes
+
+### ActionIntent
+
+The primary data structure that flows through the evaluation pipeline.
+
+```python
+from plyra_guard import ActionIntent
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `action_type` | `str` | — | Hierarchical action descriptor, e.g. `"file.delete"` |
+| `tool_name` | `str` | — | Name of the tool being invoked |
+| `parameters` | `dict[str, Any]` | — | Arguments to the tool call |
+| `agent_id` | `str` | — | Identity of the calling agent |
+| `task_context` | `str` | `""` | Human-readable description of what the agent is doing |
+| `action_id` | `str` | `uuid4()` | Unique ID for this intent (auto-generated) |
+| `task_id` | `str \| None` | `None` | Optional task grouping for multi-step workflows |
+| `timestamp` | `datetime` | `now(UTC)` | When the intent was created |
+| `estimated_cost` | `float` | `0.0` | Estimated monetary cost in USD |
+| `risk_level` | `RiskLevel` | `MEDIUM` | Pre-declared risk classification |
+| `instruction_chain` | `list[AgentCall]` | `[]` | Full delegation chain for multi-agent provenance |
+| `metadata` | `dict[str, Any]` | `{}` | Arbitrary metadata bag for extensibility |
+
+### EvaluatorResult
+
+The output of a single evaluator in the pipeline.
+
+```python
+from plyra_guard import EvaluatorResult
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `verdict` | `Verdict` | — | The evaluator's decision |
+| `reason` | `str` | — | Human-readable explanation |
+| `confidence` | `float` | `1.0` | Confidence score (0.0–1.0) |
+| `evaluator_name` | `str` | `""` | Name of the evaluator class |
+| `suggested_action` | `str \| None` | `None` | Optional remediation suggestion |
+| `metadata` | `dict[str, Any]` | `{}` | Arbitrary metadata |
+
+### AuditEntry
+
+Immutable audit record written for every action evaluated.
+
+```python
+from plyra_guard import AuditEntry
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `action_id` | `str` | — | Matches the originating `ActionIntent` |
+| `agent_id` | `str` | — | Agent that initiated the action |
+| `action_type` | `str` | — | Hierarchical action descriptor |
+| `verdict` | `Verdict` | — | Final verdict |
+| `risk_score` | `float` | `0.0` | Computed risk score |
+| `task_id` | `str \| None` | `None` | Task grouping |
+| `policy_triggered` | `str \| None` | `None` | Name of the policy that matched |
+| `evaluator_results` | `list[EvaluatorResult]` | `[]` | Results from all evaluators that ran |
+| `instruction_chain` | `list[AgentCall]` | `[]` | Delegation chain |
+| `parameters` | `dict[str, Any]` | `{}` | Tool call parameters |
+| `duration_ms` | `int` | `0` | Execution time in milliseconds |
+| `timestamp` | `datetime` | `now(UTC)` | When the action was evaluated |
+| `rolled_back` | `bool` | `False` | Whether this action was rolled back |
+| `error` | `str \| None` | `None` | Error message, if any |
+
+### AuditFilter
+
+Filter criteria for querying the audit log.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `agent_id` | `str \| None` | `None` | Filter by agent |
+| `task_id` | `str \| None` | `None` | Filter by task |
+| `verdict` | `Verdict \| None` | `None` | Filter by verdict |
+| `action_type` | `str \| None` | `None` | Filter by action type |
+| `from_time` | `datetime \| None` | `None` | Start of time range |
+| `to_time` | `datetime \| None` | `None` | End of time range |
+| `limit` | `int` | `100` | Max entries to return |
+
+### GuardMetrics
+
+Prometheus-style metrics snapshot.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `total_actions` | `int` | `0` | Total actions evaluated |
+| `allowed_actions` | `int` | `0` | Actions with ALLOW verdict |
+| `blocked_actions` | `int` | `0` | Actions with BLOCK verdict |
+| `escalated_actions` | `int` | `0` | Actions escalated |
+| `warned_actions` | `int` | `0` | Actions warned |
+| `deferred_actions` | `int` | `0` | Actions deferred |
+| `rollbacks` | `int` | `0` | Successful rollbacks |
+| `rollback_failures` | `int` | `0` | Failed rollbacks |
+| `total_cost` | `float` | `0.0` | Cumulative cost in USD |
+| `avg_risk_score` | `float` | `0.0` | Average risk score |
+| `avg_duration_ms` | `float` | `0.0` | Average evaluation duration |
+| `actions_by_agent` | `dict[str, int]` | `{}` | Per-agent action counts |
+| `actions_by_type` | `dict[str, int]` | `{}` | Per-action-type counts |
+| `verdicts_by_policy` | `dict[str, int]` | `{}` | Per-policy verdict counts |
+
+### RollbackReport
+
+Summary of a batch rollback operation.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `task_id` | `str` | — | Task that was rolled back |
+| `total_actions` | `int` | `0` | Total actions in the task |
+| `rolled_back` | `list[str]` | `[]` | Action IDs successfully rolled back |
+| `failed` | `list[str]` | `[]` | Action IDs where rollback failed |
+| `skipped` | `list[str]` | `[]` | Action IDs skipped |
+
+Property: `report.success` → `True` if no failures and at least one rollback.
+
+### AgentCall
+
+One hop in a multi-agent delegation chain.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `agent_id` | `str` | — | Agent making the call |
+| `trust_level` | `float` | — | Numeric trust score (0.0–1.0) |
+| `instruction` | `str` | — | Instruction given to this agent |
+| `timestamp` | `datetime` | `now(UTC)` | When this delegation occurred |
+
+---
+
+## Enums
+
+### Verdict
+
+```python
+from plyra_guard.core.verdict import Verdict
+```
+
+| Value | Description |
+|-------|-------------|
+| `Verdict.ALLOW` | Action may proceed |
+| `Verdict.BLOCK` | Action is denied |
+| `Verdict.ESCALATE` | Requires higher authority or human approval |
+| `Verdict.DEFER` | Deferred for async approval |
+| `Verdict.WARN` | May proceed with a warning logged |
+
+Helper methods:
+- `verdict.is_permissive()` → `True` for `ALLOW` and `WARN`
+- `verdict.is_blocking()` → `True` for `BLOCK`, `ESCALATE`, and `DEFER`
+
+### RiskLevel
+
+```python
+from plyra_guard import RiskLevel
+```
+
+| Value | Base score |
+|-------|-----------|
+| `RiskLevel.LOW` | 0.1 |
+| `RiskLevel.MEDIUM` | 0.3 |
+| `RiskLevel.HIGH` | 0.6 |
+| `RiskLevel.CRITICAL` | 0.9 |
+
+Helper: `risk_level.base_score()` → returns the float value.
+
+### TrustLevel
+
+```python
+from plyra_guard import TrustLevel
+```
+
+| Value | Trust score |
+|-------|------------|
+| `TrustLevel.HUMAN` | 1.0 |
+| `TrustLevel.ORCHESTRATOR` | 0.8 |
+| `TrustLevel.PEER` | 0.5 |
+| `TrustLevel.SUB_AGENT` | 0.3 |
+| `TrustLevel.UNKNOWN` | 0.0 |
+
+Helper: `trust_level.score()` → returns the float value.
+
+---
+
+## Exceptions
+
+All exceptions inherit from `ActionGuardError`.
+
+### Execution exceptions
+
+| Exception | When |
+|-----------|------|
+| `ExecutionBlockedError` | Action blocked by evaluation pipeline. Has `verdict`, `reason`, `what_happened`, `policy_triggered`, `how_to_fix`. |
+| `ActionEscalatedError` | Action requires escalation. Has `reason`, `escalate_to`. |
+| `ActionDeferredError` | Action deferred. Has `reason`, `defer_seconds`. |
+| `ExecutionTimeoutError` | Action execution exceeded timeout |
+| `TrustViolationError` | Agent trust too low. Has `agent_id`, `required_trust`, `actual_trust`. |
+| `CascadeDepthExceededError` | Delegation chain too deep. Has `current_depth`, `max_depth`. |
+
+### Policy exceptions
+
+| Exception | When |
+|-----------|------|
+| `PolicyError` | Base for policy errors |
+| `PolicyParseError` | YAML policy file cannot be parsed |
+| `PolicyConditionError` | Policy condition expression is invalid |
+
+### Config exceptions
+
+| Exception | When |
+|-----------|------|
+| `ConfigError` | Base for config errors |
+| `ConfigFileNotFoundError` | Config file not found |
+| `ConfigValidationError` | Config values fail validation |
+| `ConfigSchemaError` | Config structure doesn't match schema |
+
+### Budget and rate limit exceptions
+
+| Exception | When |
+|-----------|------|
+| `RateLimitExceededError` | Agent or tool exceeds rate limit. Has `agent_id`, `tool_name`, `limit`. |
+| `BudgetExceededError` | Action would exceed budget. Has `current_spend`, `budget_limit`. |
+| `HumanApprovalTimeoutError` | Human-in-the-loop approval timed out |
+
+### Other exceptions
+
+| Exception | When |
+|-----------|------|
+| `RollbackError` | Base for rollback errors |
+| `RollbackHandlerNotFoundError` | No handler registered for action type |
+| `SnapshotNotFoundError` | Snapshot not found for action |
+| `RollbackFailedError` | Rollback failed to restore state |
+| `AgentNotRegisteredError` | Unregistered agent_id referenced |
+| `AdapterNotFoundError` | No adapter for the given tool type |
+| `AdapterWrappingError` | Tool wrapping failed |
+| `ExporterError` | Exporter error |
+| `SidecarError` | Sidecar server error |
+| `SidecarStartupError` | Sidecar failed to start |
+
+### Structured error messages
+
+All blocking exceptions (`ExecutionBlockedError`, `ActionEscalatedError`,
+`RateLimitExceededError`, `BudgetExceededError`, `TrustViolationError`,
+`CascadeDepthExceededError`, `ActionDeferredError`) provide three structured fields:
+
+- `what_happened` — clear plain-English description
+- `policy_triggered` — name of the policy or evaluator
+- `how_to_fix` — concrete, actionable steps
+
+---
+
+## Environment variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PLYRA_SNAPSHOT_PATH` | `~/.plyra/snapshots.db` | SQLite database path for action snapshots |
+
+---
+
+## Configuration schema
+
+The YAML config file maps to the `GuardConfig` Pydantic model:
+
+```yaml
+version: "1.0"
+
+global:
+  default_verdict: ALLOW         # ALLOW | BLOCK
+  max_risk_score: 0.85           # 0.0–1.0
+  max_delegation_depth: 4
+  max_concurrent_delegations: 10
+
+budget:
+  per_task: 5.00                 # USD
+  per_agent_per_run: 1.00
+  currency: USD
+
+rate_limits:
+  default: "60/min"
+  per_tool:
+    file.delete: "10/min"
+
+policies: []                     # list of PolicyConfig
+
+agents:                          # list of AgentConfig
+  - id: researcher
+    trust_level: 0.5
+    can_delegate_to: []
+    max_actions_per_run: 100
+
+evaluators:
+  schema_validator:
+    enabled: true
+  policy_engine:
+    enabled: true
+  risk_scorer:
+    enabled: true
+  rate_limiter:
+    enabled: true
+  cost_estimator:
+    enabled: true
+  human_gate:
+    enabled: false
+
+rollback:
+  enabled: true
+  snapshot_dir: null
+  max_snapshots: 1000
+
+observability:
+  exporters: ["stdout"]
+  audit_log_max_entries: 10000
+
+sidecar:
+  host: "0.0.0.0"
+  port: 8080
+```

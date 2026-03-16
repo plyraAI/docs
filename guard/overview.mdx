@@ -1,0 +1,51 @@
+---
+title: "Overview"
+description: "Policy enforcement middleware for AI agent tool calls"
+icon: "shield-check"
+---
+
+AI agents execute real actions — deleting records, calling APIs, sending
+emails. There is no standard safety layer between the LLM's decision and
+execution. plyra-guard is that layer.
+
+It intercepts every tool call your agent makes, evaluates it against your
+policy, and blocks, logs, or escalates — before anything irreversible happens.
+
+{/* Diagram placeholder — replace with /images/guard-architecture.png once exported from Figma */}
+
+## How it works
+
+Every tool call passes through plyra-guard before execution:
+
+1. Your agent decides to call a tool
+2. plyra-guard intercepts the call in-process
+3. The call is evaluated against your policy — sub-2ms, no network hop
+4. Verdict: **ALLOW**, **BLOCK**, **ESCALATE**, **DEFER**, or **WARN**
+5. The decision is written to the audit log
+
+<CardGroup cols={2}>
+  <Card title="Zero latency overhead" icon="bolt">
+    Evaluation runs in-process. No network hop. Sub-2ms per call.
+  </Card>
+  <Card title="Framework agnostic" icon="plug">
+    Works with LangGraph, AutoGen, CrewAI, LangChain, OpenAI, Anthropic,
+    and plain Python.
+  </Card>
+  <Card title="Policy as code" icon="file-code">
+    Rules live in your repo, reviewed in PRs, tested in CI.
+    YAML or Python — your choice.
+  </Card>
+  <Card title="Full audit log" icon="list-check">
+    Every decision logged — allowed and blocked. Ships to OTEL,
+    Datadog, or your own sink.
+  </Card>
+</CardGroup>
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/guard/quickstart" icon="rocket">
+    Protect your first tool call in 60 seconds.
+  </Card>
+  <Card title="Policy reference" href="/guard/policy" icon="file-code">
+    Write rules that match your threat model.
+  </Card>
+</CardGroup>

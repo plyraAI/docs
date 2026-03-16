@@ -1,0 +1,141 @@
+---
+title: "Policy"
+description: "Define what your agents are and aren't allowed to do"
+icon: "file-code"
+---
+
+A policy is an ordered list of rules. The first rule that matches a tool
+call wins. If no rule matches, the `default_verdict` applies.
+
+{/* Diagram placeholder — replace with /images/guard-policy-flow.png once exported from Figma */}
+
+## YAML policy
+
+Policies are defined in your `guard_config.yaml` file. Each policy has a
+name, a list of action types to match, a condition expression, and a verdict:
+
+```yaml
+version: "1.0"
+
+global:
+  default_verdict: BLOCK
+
+policies:
+  - name: block-system-config
+    action_types: ["*"]
+    condition: 'parameters.get("path", "").startswith("/etc/")'
+    verdict: BLOCK
+    message: "System config is off-limits"
+
+  - name: block-env-files
+    action_types: ["*"]
+    condition: '".env" in parameters.get("path", "")'
+    verdict: BLOCK
+    message: "No .env access"
+
+  - name: allow-tmp
+    action_types: ["file.read", "file.write", "file.delete"]
+    condition: 'parameters.get("path", "").startswith("/tmp/")'
+    verdict: ALLOW
+
+  - name: escalate-schema-changes
+    action_types: ["db.execute"]
+    condition: '"DROP TABLE" in str(parameters)'
+    verdict: ESCALATE
+    message: "Schema changes require human approval"
+```
+
+```python
+guard = ActionGuard.from_config("guard_config.yaml")
+```
+
+## Policy fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Unique identifier for the rule |
+| `action_types` | `list[str]` | Action types to match. `["*"]` matches all. |
+| `condition` | `str` | Python expression evaluated against the `ActionIntent` |
+| `verdict` | `str` | One of `ALLOW`, `BLOCK`, `ESCALATE`, `DEFER`, `WARN` |
+| `message` | `str` | Human-readable reason shown when the rule fires |
+| `escalate_to` | `str \| None` | Target for escalation (e.g. `"human"`) |
+
+## Verdict types
+
+| Verdict | Behaviour |
+|---------|-----------|
+| `ALLOW` | Tool executes normally |
+| `BLOCK` | Tool not called. `ExecutionBlockedError` raised. |
+| `ESCALATE` | Execution paused. `ActionEscalatedError` raised. Pending human approval. |
+| `DEFER` | Deferred for async evaluation. `ActionDeferredError` raised. |
+| `WARN` | Executes but emits a warning to the audit log |
+
+## Default verdict
+
+<Warning>
+  Always set `default_verdict: BLOCK` in production. This fails closed —
+  any tool call that doesn't match a policy rule is blocked. Unmatched calls
+  are the most common source of unexpected agent behaviour.
+</Warning>
+
+## Risk levels
+
+The `RiskLevel` enum sets a baseline risk score for a protected action.
+The dynamic risk scorer adjusts it based on context (agent trust, parameters, etc.).
+
+```python
+from plyra_guard import RiskLevel
+
+@guard.protect("db.delete", risk_level=RiskLevel.HIGH)
+def delete_record(id: str): ...
+```
+
+| Level | Base score | Intent |
+|-------|-----------|--------|
+| `RiskLevel.LOW` | 0.1 | Read operations |
+| `RiskLevel.MEDIUM` | 0.3 | Reversible writes (default) |
+| `RiskLevel.HIGH` | 0.6 | Destructive or irreversible |
+| `RiskLevel.CRITICAL` | 0.9 | System-level or wide-scope |
+
+## Trust levels
+
+The `TrustLevel` enum classifies agents in multi-agent systems. Trust
+determines what risk thresholds an agent can execute under.
+
+```python
+from plyra_guard import TrustLevel
+
+guard.register_agent("researcher", trust_level=TrustLevel.PEER)
+```
+
+| Level | Trust score | Description |
+|-------|------------|-------------|
+| `TrustLevel.HUMAN` | 1.0 | Human operator — full trust |
+| `TrustLevel.ORCHESTRATOR` | 0.8 | Top-level orchestrating agent |
+| `TrustLevel.PEER` | 0.5 | Peer agent in a collaborative system |
+| `TrustLevel.SUB_AGENT` | 0.3 | Delegated sub-agent |
+| `TrustLevel.UNKNOWN` | 0.0 | Unregistered or unknown agent |
+
+## Dry-run evaluation
+
+Test a policy without executing anything:
+
+```python
+from plyra_guard import ActionIntent, Verdict
+
+intent = ActionIntent(
+    action_type="file.delete",
+    tool_name="delete_file",
+    parameters={"path": "/etc/passwd"},
+    agent_id="default",
+)
+
+result = guard.evaluate(intent)
+print(result.verdict)    # Verdict.BLOCK
+print(result.reason)     # "System config is off-limits"
+```
+
+<Note>
+  `guard.evaluate()` takes an `ActionIntent` object, not a plain string.
+  See the [API reference](/guard/api-reference) for all `ActionIntent` fields.
+</Note>

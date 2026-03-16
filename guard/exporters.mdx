@@ -1,0 +1,135 @@
+---
+title: "Exporters"
+description: "Stream audit events to your observability stack"
+icon: "arrow-up-from-bracket"
+---
+
+{/* Diagram placeholder — replace with /images/guard-exporters.png once exported from Figma */}
+
+plyra-guard emits an audit event for every decision — allowed and blocked.
+Events go to one or more exporters.
+
+<Note>
+  `StdoutExporter` is always enabled by default. It writes JSON lines to
+  stdout on every action. In production, disable it to avoid log noise by
+  setting `observability.exporters: []` in your YAML config.
+</Note>
+
+## StdoutExporter (default)
+
+Writes audit entries as JSON lines to stdout. Enabled by default when
+`"stdout"` is in the `observability.exporters` list.
+
+```python
+from plyra_guard import StdoutExporter
+
+exporter = StdoutExporter(pretty=True)  # pretty-prints JSON
+guard.add_exporter(exporter)
+```
+
+To disable in your config:
+
+```yaml
+observability:
+  exporters: []
+```
+
+### Constructor
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `stream` | `object \| None` | `sys.stdout` | Output stream |
+| `pretty` | `bool` | `False` | Pretty-print JSON output |
+
+## OTelExporter
+
+Exports audit entries as OpenTelemetry spans.
+
+```bash
+pip install "plyra-guard[otel]"
+```
+
+```python
+from plyra_guard.observability.exporters import OTelExporter
+
+guard.add_exporter(OTelExporter(service_name="my-agent"))
+```
+
+### Constructor
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `service_name` | `str` | `"plyra_guard"` | OTel service name for spans |
+
+## DatadogExporter
+
+Exports audit entries as Datadog spans via `ddtrace`.
+
+```bash
+pip install "plyra-guard[datadog]"
+```
+
+```python
+from plyra_guard.observability.exporters import DatadogExporter
+
+guard.add_exporter(DatadogExporter(service_name="my-agent"))
+```
+
+### Constructor
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `service_name` | `str` | `"plyra_guard"` | Datadog service name for spans |
+
+## WebhookExporter
+
+POSTs audit entries as JSON to an arbitrary URL. Useful for Slack, PagerDuty,
+or custom dashboards.
+
+```python
+from plyra_guard.observability.exporters import WebhookExporter
+
+guard.add_exporter(WebhookExporter(
+    url="https://hooks.slack.com/services/...",
+    headers={"Authorization": "Bearer token"},
+    timeout=10,
+))
+```
+
+### Constructor
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `url` | `str` | — | Webhook URL to POST to |
+| `headers` | `dict[str, str] \| None` | `None` | Extra HTTP headers |
+| `timeout` | `int` | `10` | Request timeout in seconds |
+
+## Combining exporters
+
+```python
+from plyra_guard.observability.exporters import (
+    OTelExporter,
+    DatadogExporter,
+    WebhookExporter,
+)
+
+guard.add_exporter(OTelExporter())
+guard.add_exporter(DatadogExporter())
+guard.add_exporter(WebhookExporter(url="https://..."))
+```
+
+## Snapshot database
+
+All decisions are written to `~/.plyra/snapshots.db` (SQLite).
+Change the path via environment variable:
+
+```bash
+export PLYRA_SNAPSHOT_PATH=/your/path/snapshots.db
+```
+
+Or in your YAML config:
+
+```yaml
+rollback:
+  snapshot_dir: /your/path/
+```

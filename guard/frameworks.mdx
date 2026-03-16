@@ -1,0 +1,128 @@
+---
+title: "Framework integrations"
+description: "LangGraph, LangChain, AutoGen, CrewAI, OpenAI, Anthropic, plain Python"
+icon: "plug"
+---
+
+## LangGraph
+
+<Warning>
+  LangGraph's `ToolNode` uses internal state tracking that conflicts with
+  transparent wrapping. **Use a custom `guarded_tool_node` — do not use
+  `guard.wrap()` with LangGraph.** This is the required pattern.
+</Warning>
+
+```python
+from langchain_core.messages import ToolMessage
+from plyra_guard import ActionGuard, ActionIntent
+from plyra_guard.exceptions import ExecutionBlockedError
+
+guard = ActionGuard.from_config("guard_config.yaml")
+TOOLS = {
+    "read_file": read_file_tool,
+    "delete_file": delete_file_tool,
+}
+
+def guarded_tool_node(state):
+    messages = []
+    for tool_call in state["messages"][-1].tool_calls:
+        tool_name = tool_call["name"]
+        args = tool_call["args"]
+
+        # Build an ActionIntent for evaluation
+        intent = ActionIntent(
+            action_type=tool_name,
+            tool_name=tool_name,
+            parameters=args,
+            agent_id="langgraph-agent",
+        )
+
+        try:
+            result = guard.evaluate(intent)
+            if result.verdict.is_blocking():
+                content = f"[BLOCKED] {result.reason}"
+            else:
+                content = TOOLS[tool_name].invoke(args)
+        except ExecutionBlockedError as e:
+            content = f"[BLOCKED] {e.reason}"
+        except Exception as e:
+            content = f"[ERROR] {e}"
+
+        messages.append(
+            ToolMessage(content=str(content), tool_call_id=tool_call["id"])
+        )
+    return {"messages": messages}
+```
+
+See the full working example in
+[`examples/langgraph_integration.py`](https://github.com/plyraAI/plyra-guard/blob/main/examples/langgraph_integration.py).
+
+## LangChain
+
+```python
+from plyra_guard import ActionGuard
+
+guard = ActionGuard.from_config("guard_config.yaml")
+safe_tools = guard.wrap(tools)
+
+agent = create_react_agent(llm, safe_tools, prompt)
+```
+
+## AutoGen
+
+```python
+import autogen
+from plyra_guard import ActionGuard
+
+guard = ActionGuard.from_config("guard_config.yaml")
+safe_tools = guard.wrap([read_file, delete_file])
+
+user_proxy = autogen.UserProxyAgent("user_proxy", human_input_mode="NEVER")
+for tool in safe_tools:
+    user_proxy.register_function(function_map={tool.__name__: tool})
+```
+
+Blocked calls return an error string into the conversation — the agent sees it
+and can course-correct. No crash, no infinite loop.
+
+## CrewAI
+
+```python
+from plyra_guard import ActionGuard
+
+guard = ActionGuard.from_config("guard_config.yaml")
+safe_tools = guard.wrap([write_report])
+agent = Agent(role="Analyst", tools=safe_tools, ...)
+```
+
+Blocked calls raise `ExecutionBlockedError`, which CrewAI's task loop catches
+natively.
+
+## OpenAI / Anthropic
+
+```python
+safe_tools = guard.wrap(tool_definitions)
+```
+
+## Plain Python
+
+```python
+from plyra_guard import ActionGuard, RiskLevel
+
+guard = ActionGuard.default()
+
+@guard.protect("my.action", risk_level=RiskLevel.MEDIUM)
+def my_function(arg: str) -> str: ...
+```
+
+## Framework support matrix
+
+| Framework | Approach | Note |
+|-----------|----------|------|
+| LangGraph | `guarded_tool_node` | Required — `guard.wrap()` is incompatible |
+| LangChain | `guard.wrap(tools)` | Drop-in replacement |
+| AutoGen | `guard.wrap([fn])` + `register_function` | |
+| CrewAI | `guard.wrap(tools)` | Drop-in |
+| OpenAI | `guard.wrap(tool_defs)` | |
+| Anthropic | `guard.wrap(tool_defs)` | |
+| Plain Python | `@guard.protect(...)` | Decorator-based |

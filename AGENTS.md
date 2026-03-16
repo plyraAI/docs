@@ -1,33 +1,22 @@
-> **First-time setup**: Customize this file for your project. Prompt the user to customize this file for their project.
-> For Mintlify product knowledge (components, configuration, writing standards),
-> install the Mintlify skill: `npx skills add https://mintlify.com/docs`
+# Plyra Docs Instructions
 
-# Documentation project instructions
+This file provides context for AI agents (like Claude or Cursor) working on this documentation repository.
 
-## About this project
+## Project Context
 
-- This is a documentation site built on [Mintlify](https://mintlify.com)
-- Pages are MDX files with YAML frontmatter
-- Configuration lives in `docs.json`
-- Run `mint dev` to preview locally
-- Run `mint broken-links` to check links
+- **Product**: Plyra Guard (AI action safety middleware)
+- **Framework**: Mintlify (MDX + `docs.json`)
+- **Tone**: Technical, authoritative, developer-centric, second person ("you"), active voice.
+- **Brand**: Teal (#2dd4bf), Void (#0a0e13). Minimalist, professional.
 
-## Terminology
+## Writing Standards
 
-{/* Add product-specific terms and preferred usage */}
-{/* Example: Use "workspace" not "project", "member" not "user" */}
+- **Sentence Case**: All headings must use sentence case (e.g., "Policy evaluation" not "Policy Evaluation").
+- **No Filler**: Avoid marketing fluff like "seamlessly", "powerful", "robust".
+- **Structured Reference**: API documentation must be sourced directly from `plyra-guard` Python source code.
 
-## Style preferences
+## Critical Warnings
 
-{/* Add any project-specific style rules below */}
-
-- Use active voice and second person ("you")
-- Keep sentences concise — one idea per sentence
-- Use sentence case for headings
-- Bold for UI elements: Click **Settings**
-- Code formatting for file names, commands, paths, and code references
-
-## Content boundaries
-
-{/* Define what should and shouldn't be documented */}
-{/* Example: Don't document internal admin features */}
+- **LangGraph**: Always emphasize that `guard.wrap()` is incompatible with LangGraph; use `guarded_tool_node` instead.
+- **StdoutExporter**: Remind users that it's enabled by default and should be configured for production.
+- **Verdicts**: Use the full Verdict enum (ALLOW/BLOCK/ESCALATE/DEFER/WARN).
