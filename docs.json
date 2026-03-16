@@ -19,7 +19,8 @@
   "logo": {
     "dark": "/images/logo-dark.svg",
     "light": "/images/logo-light.svg",
-    "href": "https://docs.plyra.dev"
+    "href": "https://docs.plyra.dev",
+    "height": 32
   },
   "navbar": {
     "links": [

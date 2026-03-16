@@ -17,57 +17,7 @@ policy, and blocks, logs, or escalates — before anything irreversible happens.
 </Note>
 
 <div style={{margin: '32px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #1e2a38'}}>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 420" style={{width:'100%', background:'#0d1117'}}>
-  <defs>
-    <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-    </marker>
-  </defs>
-  <!-- Agent box -->
-  <rect x="180" y="32" width="360" height="72" rx="6" fill="#141b24" stroke="#1e2a38" strokeWidth="0.5"/>
-  <rect x="180" y="32" width="360" height="3" rx="2" fill="#5a7a96"/>
-  <text x="360" y="66" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="14" fontWeight="500" fill="#f0f4f8">Your agent</text>
-  <text x="360" y="86" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="12" fill="#8899aa">LangGraph · AutoGen · CrewAI · LangChain · plain Python</text>
-  <!-- Arrow down -->
-  <line x1="360" y1="104" x2="360" y2="136" stroke="#8899aa" strokeWidth="1" fill="none" markerEnd="url(#a)"/>
-  <text x="372" y="124" fontFamily="monospace" fontSize="10" fill="#8899aa">tool calls</text>
-  <!-- Guard box -->
-  <rect x="140" y="136" width="440" height="132" rx="6" fill="#0d1117" stroke="#1e2a38" strokeWidth="0.5"/>
-  <rect x="140" y="136" width="440" height="3" rx="2" fill="#2dd4bf"/>
-  <text x="360" y="170" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="14" fontWeight="500" fill="#2dd4bf">plyra-guard</text>
-  <line x1="140" y1="184" x2="580" y2="184" stroke="#1e2a38" strokeWidth="0.5"/>
-  <text x="240" y="206" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#2dd4bf">INTERCEPT</text>
-  <text x="360" y="206" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#2dd4bf">EVALUATE</text>
-  <text x="480" y="206" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#2dd4bf">DECIDE</text>
-  <line x1="300" y1="190" x2="300" y2="220" stroke="#1e2a38" strokeWidth="0.5"/>
-  <line x1="420" y1="190" x2="420" y2="220" stroke="#1e2a38" strokeWidth="0.5"/>
-  <text x="240" y="222" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="11" fill="#8899aa">every tool call</text>
-  <text x="360" y="222" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="11" fill="#8899aa">against policy</text>
-  <text x="480" y="222" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="11" fill="#8899aa">allow · block · escalate</text>
-  <line x1="140" y1="232" x2="580" y2="232" stroke="#1e2a38" strokeWidth="0.5"/>
-  <text x="360" y="252" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#8899aa">in-process · sub-2ms · full audit log</text>
-  <!-- Arrow allowed (teal) -->
-  <line x1="360" y1="268" x2="360" y2="300" stroke="#2dd4bf" strokeWidth="1" fill="none" markerEnd="url(#a)"/>
-  <text x="372" y="288" fontFamily="monospace" fontSize="10" fill="#2dd4bf">allowed only</text>
-  <!-- Tools box -->
-  <rect x="180" y="300" width="360" height="72" rx="6" fill="#141b24" stroke="#1e2a38" strokeWidth="0.5"/>
-  <rect x="180" y="300" width="360" height="3" rx="2" fill="#5a7a96"/>
-  <text x="360" y="334" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="14" fontWeight="500" fill="#f0f4f8">Tools</text>
-  <text x="360" y="354" textAnchor="middle" fontFamily="system-ui,sans-serif" fontSize="12" fill="#8899aa">files · databases · APIs · email · browsers</text>
-  <!-- BLOCK -->
-  <line x1="580" y1="202" x2="632" y2="202" stroke="#f43f5e" strokeWidth="1" fill="none" strokeDasharray="4 2" markerEnd="url(#a)"/>
-  <rect x="634" y="182" width="60" height="40" rx="4" fill="#1a0808" stroke="#f43f5e" strokeWidth="0.5"/>
-  <text x="664" y="200" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#f43f5e">BLOCK</text>
-  <text x="664" y="214" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#f43f5e">+ log</text>
-  <!-- ESCALATE -->
-  <line x1="140" y1="202" x2="88" y2="202" stroke="#f59e0b" strokeWidth="1" fill="none" strokeDasharray="4 2" markerEnd="url(#a)"/>
-  <rect x="26" y="182" width="60" height="40" rx="4" fill="#1a1208" stroke="#f59e0b" strokeWidth="0.5"/>
-  <text x="56" y="200" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#f59e0b">ESCAL</text>
-  <text x="56" y="214" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#f59e0b">→ human</text>
-  <!-- Version pill -->
-  <rect x="290" y="390" width="140" height="20" rx="10" fill="rgba(45,212,191,0.08)" stroke="#2dd4bf" strokeWidth="0.5"/>
-  <text x="360" y="404" textAnchor="middle" fontFamily="monospace" fontSize="10" fill="#2dd4bf">v0.1.9 · PyPI · Apache 2.0</text>
-</svg>
+  <img src="/images/guard-architecture.svg" alt="Plyra Guard Architecture" style={{width:'100%', background:'#0d1117'}} />
 </div>
 
 ## How it works

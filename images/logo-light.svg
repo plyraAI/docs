@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 44" fill="none">
-  <!-- Heron mark -->
-  <g transform="translate(0, 2) scale(0.35)">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 50" fill="none">
+  <!-- Heron mark - scaled up and repositioned -->
+  <g transform="translate(4, 4) scale(0.45)">
     <polygon points="32,8 52,30 44,60 20,60 12,30" fill="#2dd4bf" opacity="0.92"/>
     <polygon points="20,28 2,50 20,54 28,34" fill="#1a9e8f"/>
     <polygon points="44,28 62,50 44,54 36,34" fill="#1a9e8f"/>
@@ -15,10 +15,10 @@
     <line x1="42" y1="76" x2="33" y2="79" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/>
     <line x1="42" y1="76" x2="51" y2="79" stroke="#2dd4bf" stroke-width="2" stroke-linecap="round"/>
   </g>
-  <text x="36" y="30"
+  <text x="44" y="34"
     font-family="Syne, system-ui, sans-serif"
     font-weight="800"
-    font-size="24"
+    font-size="28"
     fill="#0a0e13"
     letter-spacing="-0.5">Plyra</text>
 </svg>
