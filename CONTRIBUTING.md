@@ -1,34 +1,30 @@
-> **Customize this file**: Tailor this template to your project by noting specific contribution types you're looking for, adding a Code of Conduct, or adjusting the writing guidelines to match your style.
+# Contribute to Plyra docs
 
-# Contribute to the documentation
+## Edit a page
 
-Thank you for your interest in contributing to our documentation! This guide will help you get started.
+1. Find the `.mdx` file in this repo
+2. Make your changes
+3. Open a pull request — Mintlify deploys automatically on merge
 
-## How to contribute
+## Run locally
 
-### Option 1: Edit directly on GitHub
+```bash
+npm i -g mintlify
+mintlify dev
+```
 
-1. Navigate to the page you want to edit
-2. Click the "Edit this file" button (the pencil icon)
-3. Make your changes and submit a pull request
+Visit http://localhost:3000.
 
-### Option 2: Local development
+## Check for broken links
 
-1. Fork and clone this repository
-2. Install the Mintlify CLI: `npm i -g mint`
-3. Create a branch for your changes
-4. Make changes
-5. Navigate to the docs directory and run `mint dev`
-6. Preview your changes at `http://localhost:3000`
-7. Commit your changes and submit a pull request
-
-For more details on local development, see our [development guide](development.mdx).
+```bash
+mintlify broken-links
+```
 
 ## Writing guidelines
 
-- **Use active voice**: "Run the command" not "The command should be run"
-- **Address the reader directly**: Use "you" instead of "the user"
-- **Keep sentences concise**: Aim for one idea per sentence
-- **Lead with the goal**: Start instructions with what the user wants to accomplish
-- **Use consistent terminology**: Don't alternate between synonyms for the same concept
-- **Include examples**: Show, don't just tell
+- Second person: "you" not "the user"
+- Active voice: "plyra-guard intercepts" not "the call is intercepted"  
+- Sentence case headings
+- No filler: never "seamlessly", "powerful", "easy", "simply"
+- Real code only: every code block must run against the actual API
