@@ -1,0 +1,69 @@
+---
+title: "Deploy"
+description: "Self-host plyra-memory-server on Azure, Docker, or any cloud"
+icon: "cloud"
+---
+
+## Azure Container Apps (recommended)
+
+The hosted Plyra instance runs on Azure Container Apps in the Central India region. To run your own:
+
+```bash
+# 1. Build and push the image
+docker build -t your-registry/plyra-memory-server:latest .
+docker push your-registry/plyra-memory-server:latest
+
+# 2. Create the container app
+az containerapp create \
+  --name plyra-memory-server \
+  --resource-group your-rg \
+  --image your-registry/plyra-memory-server:latest \
+  --target-port 7700 \
+  --ingress external \
+  --secrets \
+    admin-key=your_admin_key \
+    groq-key=your_groq_key \
+  --env-vars \
+    PLYRA_ADMIN_API_KEY=secretref:admin-key \
+    GROQ_API_KEY=secretref:groq-key
+```
+
+## Environment variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PLYRA_ADMIN_API_KEY` | ✅ | Admin key for key management routes |
+| `GROQ_API_KEY` | — | LLM extraction (Groq is preferred) |
+| `ANTHROPIC_API_KEY` | — | Fallback LLM provider |
+| `OPENAI_API_KEY` | — | Fallback LLM provider |
+| `PLYRA_DATABASE_URL` | — | Postgres URL for multi-node deployments |
+| `PLYRA_SERVER_PORT` | — | Default: 7700 |
+| `PLYRA_LOG_LEVEL` | — | Default: INFO |
+
+## LLM provider priority
+
+The server uses LLMs to extract structured facts from free-text memories. Provider priority:
+
+1. Groq (`GROQ_API_KEY`) — preferred, fastest
+2. Anthropic (`ANTHROPIC_API_KEY`) — fallback
+3. OpenAI (`OPENAI_API_KEY`) — fallback
+4. Regex — no LLM required, reduced extraction quality
+
+## Postgres (multi-node)
+
+For deployments with multiple server instances, use Postgres instead of SQLite:
+
+```bash
+export PLYRA_DATABASE_URL=postgresql://user:pass@host:5432/plyra_memory
+```
+
+## Health check
+
+```bash
+curl https://your-server/health
+# → {"status": "ok", "version": "0.3.0"}
+```
+
+<Warning>
+  Always set `PLYRA_ADMIN_API_KEY` to a strong random value before deployment. The default is insecure and must be changed.
+</Warning>

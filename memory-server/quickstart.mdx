@@ -1,0 +1,97 @@
+---
+title: "Quickstart"
+description: "Run plyra-memory-server with Docker in 5 minutes"
+icon: "rocket"
+---
+
+## Use the hosted instance
+
+The fastest path — no setup required:
+
+```bash
+export PLYRA_SERVER_URL=https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io
+export PLYRA_API_KEY=plm_live_your_key_here
+```
+
+[Generate an API key →](/memory-server/api-keys)
+
+## Self-host with Docker
+
+```bash
+docker run -d \
+  --name plyra-memory-server \
+  -p 7700:7700 \
+  -e PLYRA_ADMIN_API_KEY=your_strong_admin_key \
+  -v plyra-data:/data \
+  ghcr.io/plyraai/plyra-memory-server:latest
+```
+
+The server starts at `http://localhost:7700`.
+
+### Verify it's running
+
+```bash
+curl http://localhost:7700/health
+# → {"status": "ok", "version": "..."}
+```
+
+## Create your first API key
+
+```bash
+curl -X POST http://localhost:7700/admin/keys \
+  -H "Authorization: Bearer your_strong_admin_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspace_id": "my-workspace",
+    "label": "development",
+    "env": "test"
+  }'
+
+# → {"key": "plm_test_...", "key_id": "...", "workspace_id": "..."}
+```
+
+<Warning>
+  The key is returned **once**. Copy it immediately — it cannot be retrieved again.
+</Warning>
+
+## Connect plyra-memory
+
+```bash
+export PLYRA_SERVER_URL=http://localhost:7700
+export PLYRA_API_KEY=plm_test_your_key_here
+```
+
+```python
+from plyra_memory import Memory
+import asyncio
+
+async def main():
+    async with Memory(agent_id="my-agent") as mem:
+        await mem.remember("server mode is working")
+        ctx = await mem.context_for("is it working")
+        print(ctx.content)
+
+asyncio.run(main())
+```
+
+## Docker Compose
+
+```yaml
+version: "3.9"
+services:
+  plyra-memory-server:
+    image: ghcr.io/plyraai/plyra-memory-server:latest
+    ports:
+      - "7700:7700"
+    environment:
+      PLYRA_ADMIN_API_KEY: ${PLYRA_ADMIN_API_KEY}
+    volumes:
+      - plyra-data:/data
+
+volumes:
+  plyra-data:
+```
+
+```bash
+PLYRA_ADMIN_API_KEY=your_strong_key docker compose up -d
+```

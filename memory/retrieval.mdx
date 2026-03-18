@@ -1,0 +1,127 @@
+---
+title: "Retrieval"
+description: "How recall() and context_for() work — hybrid scoring and token budgets"
+icon: "magnifying-glass"
+---
+
+<div style={{margin: '32px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #1e2a38'}}>
+  <img src="/images/memory-retrieval.svg" alt="Plyra Memory Retrieval Flow" style={{width:'100%', background:'#0d1117'}} />
+</div>
+
+## recall()
+
+Searches across all three memory layers simultaneously and returns a ranked list of results.
+
+```python
+result = await mem.recall("LangGraph debugging")
+for r in result.results:
+    print(f"[{r.layer.value}] {r.content}  score={r.score:.2f}")
+```
+
+### How scores are computed
+
+Each result carries a composite score fused from three signals:
+
+| Signal | Weight | Description |
+|--------|--------|-------------|
+| Similarity | `similarity_weight` | Cosine similarity between query and content embeddings |
+| Recency | `recency_weight` | How recently this memory was stored |
+| Importance | `importance_weight` | The importance score set when storing |
+
+Weights are configurable via `MemoryConfig` or env vars:
+
+```bash
+export PLYRA_SIMILARITY_WEIGHT=0.6
+export PLYRA_RECENCY_WEIGHT=0.2
+export PLYRA_IMPORTANCE_WEIGHT=0.2
+```
+
+The weights must sum to 1.0.
+
+### Filtering by layer
+
+```python
+from plyra_memory.schema import MemoryLayer
+
+# Search only episodic and semantic
+result = await mem.recall(
+    "user preferences",
+    layers=[MemoryLayer.EPISODIC, MemoryLayer.SEMANTIC],
+)
+```
+
+### RecallResult fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | `str` | The original query string |
+| `results` | `list[RankedMemory]` | Ranked memory results across all layers |
+| `total_found` | `int` | Total matches before ranking |
+| `layers_searched` | `list[MemoryLayer]` | Layers that were searched |
+| `cache_hit` | `bool` | Whether result came from cache |
+| `latency_ms` | `float` | Query execution time in milliseconds |
+| `retrieved_at` | `datetime` | When the recall was executed |
+
+### RankedMemory fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `str` | Unique memory ID |
+| `layer` | `MemoryLayer` | Which layer this came from |
+| `content` | `str` | The memory content |
+| `score` | `float` | Composite score (0.0–1.0) |
+| `similarity` | `float` | Similarity component |
+| `recency` | `float` | Recency component |
+| `importance` | `float` | Importance component |
+| `created_at` | `datetime` | When memory was created |
+| `source_id` | `str` | ID of source record |
+| `metadata` | `dict[str, Any]` | Custom metadata |
+
+## context_for()
+
+Builds a token-budgeted string ready to inject into a prompt. Internally calls `recall()` with `top_k=50`, then fills the budget with the highest-scoring results.
+
+```python
+ctx = await mem.context_for(
+    "what does the user prefer?",
+    token_budget=500,
+)
+
+# Inject into your prompt
+prompt = f"Context from memory:\n{ctx.content}\n\nUser question: ..."
+print(f"Used {ctx.memories_used} memories, {ctx.token_count} tokens")
+```
+
+### ContextResult fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | `str` | The original query |
+| `content` | `str` | Formatted context string ready for injection |
+| `token_count` | `int` | Actual tokens used |
+| `token_budget` | `int` | Budget provided |
+| `memories_used` | `int` | Number of memory results included |
+| `cache_hit` | `bool` | Whether result came from cache |
+| `latency_ms` | `float` | Query execution time |
+| `retrieved_at` | `datetime` | When the context was retrieved |
+
+### Token budget
+
+The default token budget comes from `MemoryConfig.default_token_budget` (default: 2048). Override per-call:
+
+```python
+# Tight budget — most relevant memory only
+ctx = await mem.context_for("query", token_budget=200)
+
+# Generous budget — full context
+ctx = await mem.context_for("query", token_budget=2000)
+```
+
+## Embedding model
+
+By default, plyra-memory uses `all-MiniLM-L6-v2` from sentence-transformers (384-dimensional embeddings, runs locally).
+
+```bash
+export PLYRA_EMBED_MODEL=all-MiniLM-L6-v2
+export PLYRA_EMBED_DIM=384
+```

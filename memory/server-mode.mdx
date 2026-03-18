@@ -1,0 +1,74 @@
+---
+title: "Server mode"
+description: "Share memory across agents and enable multi-tenant isolation"
+icon: "server"
+---
+
+By default, plyra-memory runs entirely locally. Server mode connects the library to a running [plyra-memory-server](/memory-server/overview) instance, enabling:
+
+- **Multi-agent memory sharing** — multiple agents share a memory space
+- **Multi-tenant isolation** — each API key has its own isolated workspace
+- **Cross-process recall** — memory survives process restarts and redeploys
+- **Centralised management** — one server, multiple teams or customers
+
+## Connect
+
+Set two environment variables:
+
+```bash
+export PLYRA_SERVER_URL=https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io
+export PLYRA_API_KEY=plm_live_your_key_here
+```
+
+No code changes. The library detects `PLYRA_SERVER_URL` and routes all `remember()`, `recall()`, and `context_for()` calls to the server.
+
+```python
+# Exactly the same code — works in local and server mode
+async with Memory(agent_id="support-agent") as mem:
+    await mem.remember("User opened ticket #4821")
+    ctx = await mem.context_for("recent user issues")
+```
+
+## When to use server mode
+
+| Situation | Mode |
+|-----------|------|
+| Single agent, development | Local |
+| Single agent, production | Local or server |
+| Multiple agents sharing memory | Server required |
+| Multiple teams or customers | Server required |
+| Need cross-process recall without file sharing | Server |
+
+## Get an API key
+
+<Card title="Generate an API key" href="/memory-server/api-keys" icon="key" color="#818cf8">
+  Create a live API key in seconds. Shown once — store it securely.
+</Card>
+
+## Test the connection
+
+```python
+import asyncio
+from plyra_memory import Memory
+
+async def test():
+    async with Memory(agent_id="test") as mem:
+        await mem.remember("connection test")
+        ctx = await mem.context_for("connection test")
+        print("Connected:", ctx.content)
+
+asyncio.run(test())
+```
+
+## Switching between modes
+
+```bash
+# Local mode (default — no env vars needed)
+unset PLYRA_SERVER_URL
+
+# Server mode
+export PLYRA_SERVER_URL=https://...
+export PLYRA_API_KEY=plm_live_...
+```
+
+Your code is identical in both modes.

@@ -1,0 +1,78 @@
+---
+title: "Framework integrations"
+description: "LangGraph, LangChain, AutoGen, CrewAI, OpenAI Agents SDK, plain Python"
+icon: "plug"
+---
+
+## LangGraph
+
+```python
+from plyra_memory import Memory
+from plyra_memory.adapters.langgraph import context_node, remember_node
+
+mem = Memory(agent_id="my-agent")
+
+graph.add_node("remember", lambda s: remember_node(s, memory=mem))
+graph.add_node("context",  lambda s: context_node(s, memory=mem))
+```
+
+## LangChain
+
+```python
+from plyra_memory.adapters.langchain import PlyraMemory
+
+lc_mem = PlyraMemory(mem)
+context = await lc_mem.aload_memory_variables({"input": "query"})
+```
+
+## AutoGen
+
+```python
+from plyra_memory.adapters.autogen import MemoryHook
+
+hook = MemoryHook(mem)
+context = await hook.on_message("user message")
+```
+
+## CrewAI
+
+```python
+from plyra_memory.adapters.crewai import MemoryTool
+
+tool = MemoryTool(mem)
+result = tool.run("search query")
+```
+
+## OpenAI Agents SDK
+
+```python
+from plyra_memory.adapters.openai_agents import get_openai_tools
+
+tools = get_openai_tools(mem)
+```
+
+## Plain Python
+
+```python
+import asyncio
+from plyra_memory import Memory
+
+async def main():
+    async with Memory(agent_id="my-agent") as mem:
+        await mem.remember("any string")
+        result = await mem.recall("any query")
+        ctx = await mem.context_for("any prompt fragment")
+
+asyncio.run(main())
+```
+
+## Framework support matrix
+
+| Framework | Adapter | Pattern |
+|-----------|---------|---------|
+| LangGraph | `adapters.langgraph` | `context_node` + `remember_node` |
+| LangChain | `adapters.langchain` | `PlyraMemory` class |
+| AutoGen | `adapters.autogen` | `MemoryHook` |
+| CrewAI | `adapters.crewai` | `MemoryTool` |
+| OpenAI Agents | `adapters.openai_agents` | `get_openai_tools()` |
+| Plain Python | — | Direct `async with Memory(...)` |

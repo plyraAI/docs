@@ -1,0 +1,338 @@
+---
+title: "API reference"
+description: "Complete Memory, schema, and configuration API"
+icon: "code"
+---
+
+## Memory class
+
+### Constructor
+
+<ParamField path="config" type="MemoryConfig | None">
+  A `MemoryConfig` Pydantic model. If `None`, uses `MemoryConfig()` defaults.
+</ParamField>
+
+<ParamField path="agent_id" type="str" default="default-agent">
+  Unique agent identifier. Memory is namespaced by agent_id.
+</ParamField>
+
+<ParamField path="session_id" type="str | None" default="None">
+  Session ID. If `None`, generates a new UUID. Used to track session-level memory.
+</ParamField>
+
+<ParamField path="embedder" type="Embedder | None" default="None">
+  Custom embedder (for advanced use — usually auto-configured).
+</ParamField>
+
+<ParamField path="vectors" type="VectorBackend | None" default="None">
+  Custom vector backend (for advanced use — usually auto-configured).
+</ParamField>
+
+<ParamField path="store" type="StorageBackend | None" default="None">
+  Custom storage backend (for advanced use — usually auto-configured).
+</ParamField>
+
+### remember()
+
+Write to all three memory layers in one call.
+
+```python
+result = await mem.remember(
+    "User prefers async Python",
+    importance=0.7,
+    source="conversation",
+    event=EpisodeEvent.USER_MESSAGE,
+    metadata={"context": "debugging session"}
+)
+```
+
+<ParamField path="content" type="str" required>
+  Memory content (1–8000 characters).
+</ParamField>
+
+<ParamField path="importance" type="float" default="0.5">
+  Importance score (0.0–1.0). Higher = more likely to be recalled.
+</ParamField>
+
+<ParamField path="source" type="str | None">
+  Optional source identifier (e.g., "user_input", "tool_output").
+</ParamField>
+
+<ParamField path="event" type="EpisodeEvent" default="EpisodeEvent.AGENT_RESPONSE">
+  Event type for episodic record.
+</ParamField>
+
+<ParamField path="tool_name" type="str | None">
+  Tool name if this memory came from a tool call.
+</ParamField>
+
+<ParamField path="metadata" type="dict[str, Any] | None">
+  Custom metadata dictionary.
+</ParamField>
+
+<ResponseField name="return" type="dict">
+  ```python
+  {
+    "working": WorkingEntry,
+    "working_entry": WorkingEntry,  # alias
+    "episodic": Episode,
+    "episode": Episode,  # alias
+    "facts": []  # empty — extracted asynchronously
+  }
+  ```
+</ResponseField>
+
+### recall()
+
+Search across all three layers and return ranked results.
+
+```python
+result = await mem.recall("Python frameworks", top_k=10)
+for r in result.results:
+    print(f"{r.layer.value}: {r.content} (score: {r.score:.2f})")
+```
+
+<ParamField path="query" type="str" required>
+  Search query (1–500 characters).
+</ParamField>
+
+<ParamField path="top_k" type="int" default="10">
+  Maximum results to return (1–100).
+</ParamField>
+
+<ParamField path="layers" type="list[MemoryLayer] | None">
+  Filter to specific layers. Defaults to all three.
+</ParamField>
+
+<ResponseField name="return" type="RecallResult">
+  Results object with:
+  - `results`: list of `RankedMemory` ranked by composite score
+  - `total_found`: total matches before ranking
+  - `cache_hit`: whether result came from semantic cache
+  - `latency_ms`: query time in milliseconds
+</ResponseField>
+
+### context_for()
+
+Build a token-budgeted context string for prompt injection.
+
+```python
+ctx = await mem.context_for("user preferences", token_budget=500)
+prompt = f"Context:\n{ctx.content}\n\nQuestion: ..."
+```
+
+<ParamField path="query" type="str" required>
+  Search query.
+</ParamField>
+
+<ParamField path="token_budget" type="int | None">
+  Maximum tokens (default from config: 2048). Memories are included until budget is reached.
+</ParamField>
+
+<ParamField path="layers" type="list[MemoryLayer] | None">
+  Filter to specific layers.
+</ParamField>
+
+<ResponseField name="return" type="ContextResult">
+  - `content`: Formatted string ready for injection
+  - `token_count`: Actual tokens used
+  - `token_budget`: Budget provided
+  - `memories_used`: Number of results included
+  - `cache_hit`: Whether result came from cache
+</ResponseField>
+
+### flush()
+
+End current session and flush working memory to episodic.
+
+```python
+episodes = await mem.flush()  # Returns list[Episode]
+```
+
+<ResponseField name="return" type="list[Episode]">
+  Episodic records created from flushed working entries.
+</ResponseField>
+
+### close()
+
+Close database connections and cleanup.
+
+```python
+await mem.close()
+```
+
+## Layer access
+
+All three layers are available as direct attributes:
+
+```python
+await mem.working.add(entry)
+await mem.episodic.record(episode)
+await mem.semantic.learn(fact)
+```
+
+### working
+
+Direct access to working memory layer.
+
+```python
+entries = await mem.working.get_entries(session_id=mem.session_id)
+for e in entries:
+    print(e.content, e.importance)
+```
+
+### episodic
+
+Direct access to episodic memory layer.
+
+```python
+episodes = await mem.episodic.search("LangGraph", limit=10)
+```
+
+### semantic
+
+Direct access to semantic memory (knowledge graph).
+
+```python
+facts = await mem.semantic.find(
+    subject="user",
+    predicates=[FactRelation.PREFERS]
+)
+```
+
+## Fact
+
+Semantic memory triple: subject–predicate–object.
+
+<ParamField path="agent_id" type="str" required>
+  Agent that stored this fact.
+</ParamField>
+
+<ParamField path="subject" type="str" required>
+  Subject (1–500 characters).
+</ParamField>
+
+<ParamField path="predicate" type="FactRelation" required>
+  Relationship type.
+</ParamField>
+
+<ParamField path="object" type="str" required>
+  Object (1–2000 characters).
+</ParamField>
+
+<ParamField path="confidence" type="float" default="0.8">
+  Confidence score (0.0–1.0).
+</ParamField>
+
+<ParamField path="importance" type="float" default="0.5">
+  Importance score (0.0–1.0).
+</ParamField>
+
+<ParamField path="user_id" type="str | None">
+  Optional user identifier for multi-user agents.
+</ParamField>
+
+<ParamField path="metadata" type="dict[str, Any]">
+  Custom metadata.
+</ParamField>
+
+## FactRelation enum
+
+See [Memory layers](/memory/layers#factrelation-values) for complete list and descriptions.
+
+Values: `PREFERS`, `DISLIKES`, `IS`, `IS_A`, `HAS`, `HAS_PROPERTY`, `KNOWS`, `USES`, `WORKS_ON`, `LOCATED_IN`, `BELONGS_TO`, `RELATED_TO`, `REQUIRES`, `LEARNED_FROM`, `CUSTOM`
+
+## MemoryConfig
+
+Configuration class (Pydantic BaseSettings). All fields support `PLYRA_*` environment variables.
+
+<ParamField path="embed_model" type="str" default="all-MiniLM-L6-v2">
+  Embedding model name (from sentence-transformers).
+</ParamField>
+
+<ParamField path="embed_dim" type="int" default="384">
+  Embedding dimensionality.
+</ParamField>
+
+<ParamField path="store_url" type="str" default="~/.plyra/memory.db">
+  SQLite database path. Expands `~` to home directory.
+</ParamField>
+
+<ParamField path="vectors_url" type="str" default="~/.plyra/memory.index">
+  ChromaDB vectors path.
+</ParamField>
+
+<ParamField path="default_token_budget" type="int" default="2048">
+  Default token budget for `context_for()`.
+</ParamField>
+
+<ParamField path="default_similarity_weight" type="float" default="0.5">
+  Weight for similarity in composite score (0.0–1.0).
+</ParamField>
+
+<ParamField path="default_recency_weight" type="float" default="0.3">
+  Weight for recency in composite score (0.0–1.0).
+</ParamField>
+
+<ParamField path="default_importance_weight" type="float" default="0.2">
+  Weight for importance in composite score (0.0–1.0).
+</ParamField>
+
+<ParamField path="cache_enabled" type="bool" default="true">
+  Enable semantic cache for recall results.
+</ParamField>
+
+<ParamField path="cache_similarity_threshold" type="float" default="0.92">
+  Similarity threshold for cache hits (0.0–1.0).
+</ParamField>
+
+<ParamField path="cache_max_size" type="int" default="1000">
+  Maximum cached queries.
+</ParamField>
+
+<ParamField path="summarize_enabled" type="bool" default="true">
+  Enable episodic summarization.
+</ParamField>
+
+<ParamField path="promotion_check_enabled" type="bool" default="true">
+  Enable automatic fact promotion from episodic to semantic.
+</ParamField>
+
+<ParamField path="groq_api_key" type="str | None">
+  Groq API key for LLM-based fact extraction (preferred).
+</ParamField>
+
+<ParamField path="anthropic_api_key" type="str | None">
+  Anthropic API key for LLM-based fact extraction.
+</ParamField>
+
+<ParamField path="openai_api_key" type="str | None">
+  OpenAI API key for LLM-based fact extraction.
+</ParamField>
+
+## MemoryLayer enum
+
+Values: `WORKING`, `EPISODIC`, `SEMANTIC`
+
+## Environment variables
+
+All configuration can be set via `PLYRA_*` env vars:
+
+| Variable | Type | Default |
+|----------|------|---------|
+| `PLYRA_EMBED_MODEL` | str | all-MiniLM-L6-v2 |
+| `PLYRA_EMBED_DIM` | int | 384 |
+| `PLYRA_STORE_URL` | str | ~/.plyra/memory.db |
+| `PLYRA_VECTORS_URL` | str | ~/.plyra/memory.index |
+| `PLYRA_DEFAULT_TOKEN_BUDGET` | int | 2048 |
+| `PLYRA_SIMILARITY_WEIGHT` | float | 0.5 |
+| `PLYRA_RECENCY_WEIGHT` | float | 0.3 |
+| `PLYRA_IMPORTANCE_WEIGHT` | float | 0.2 |
+| `PLYRA_CACHE_ENABLED` | bool | true |
+| `PLYRA_CACHE_SIMILARITY_THRESHOLD` | float | 0.92 |
+| `PLYRA_SUMMARIZE_ENABLED` | bool | true |
+| `PLYRA_GROQ_API_KEY` | str | — |
+| `PLYRA_ANTHROPIC_API_KEY` | str | — |
+| `PLYRA_OPENAI_API_KEY` | str | — |
+| `PLYRA_SERVER_URL` | str | — |
+| `PLYRA_API_KEY` | str | — |

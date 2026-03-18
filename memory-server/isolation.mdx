@@ -1,0 +1,49 @@
+---
+title: "Workspace isolation"
+description: "How plyra-memory-server isolates memory between tenants"
+icon: "shield"
+---
+
+Every API key belongs to a workspace. Memory is fully isolated between workspaces — no data can cross workspace boundaries.
+
+## How it works
+
+The server extracts the workspace from the API key on every request. All memory operations are scoped to that workspace automatically.
+
+```python
+# Agent A — workspace "acme"
+# PLYRA_API_KEY=plm_live_acme...
+async with Memory(agent_id="agent-1") as mem:
+    await mem.remember("acme internal strategy")
+
+# Agent B — workspace "other"
+# PLYRA_API_KEY=plm_live_other...
+async with Memory(agent_id="agent-1") as mem:
+    ctx = await mem.context_for("acme internal strategy")
+    # → returns nothing. Workspace isolation enforced server-side.
+```
+
+## Namespacing within a workspace
+
+Within a workspace, memory is further namespaced by `agent_id`:
+
+```python
+# Support agent — only sees its own memory
+async with Memory(agent_id="support-agent") as mem:
+    await mem.remember("user prefers dark mode")
+
+# Sales agent — different namespace, cannot see support memory
+async with Memory(agent_id="sales-agent") as mem:
+    ctx = await mem.context_for("user preferences")
+    # Returns nothing — different agent_id namespace
+```
+
+## One key per use case
+
+Create separate API keys for:
+
+* Each environment (dev / staging / prod)
+* Each team or customer
+* Each agent type, if strict isolation is required
+
+Revoke a single key to cut off one tenant without affecting others.

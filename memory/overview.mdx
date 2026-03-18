@@ -1,0 +1,45 @@
+---
+title: "Overview"
+description: "Persistent structured memory for AI agents"
+icon: "database"
+---
+
+AI agents forget everything between sessions. Context windows overflow. Users explain themselves again and again. plyra-memory fixes that.
+
+It gives your agent a persistent, three-layer cognitive memory — working, episodic, and semantic — with a hybrid retrieval engine that fuses results across all three, ranked by similarity, recency, and importance.
+
+<div style={{margin: '32px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #1e2a38'}}>
+  <img src="/images/memory-architecture.svg" alt="Plyra Memory Architecture" style={{width:'100%', background:'#0d1117'}} />
+</div>
+
+## Three memory layers
+
+<CardGroup cols={3}>
+  <Card title="Working" icon="bolt" color="#818cf8">
+    Current session scratchpad. Fast writes, in-memory.
+    Flushed to episodic at session end.
+  </Card>
+  <Card title="Episodic" icon="clock" color="#818cf8">
+    Event timeline with full conversation and action history.
+    Vector search across all past sessions.
+  </Card>
+  <Card title="Semantic" icon="brain" color="#818cf8">
+    Structured knowledge graph — subject, predicate, object.
+    Facts that survive restarts and are never duplicated.
+  </Card>
+</CardGroup>
+
+## Local-first. Server-optional.
+
+By default, plyra-memory runs entirely on your machine — SQLite for structured data, ChromaDB for vectors. No external services, no API keys.
+
+When you need multi-agent memory sharing or multi-tenant isolation, point `PLYRA_SERVER_URL` at a [plyra-memory-server](/memory-server/overview) instance. Zero code changes — the library detects the env var and routes automatically.
+
+<CardGroup cols={2}>
+  <Card title="Quickstart" href="/memory/quickstart" icon="rocket">
+    Remember your first fact in 60 seconds.
+  </Card>
+  <Card title="Memory layers" href="/memory/layers" icon="layers">
+    Deep dive into working, episodic, and semantic storage.
+  </Card>
+</CardGroup>

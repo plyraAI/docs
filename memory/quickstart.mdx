@@ -1,0 +1,81 @@
+---
+title: "Quickstart"
+description: "Give your agent persistent memory in 60 seconds"
+icon: "rocket"
+---
+
+## Install
+
+<CodeGroup>
+```bash pip
+pip install plyra-memory
+```
+```bash uv
+uv add plyra-memory
+```
+</CodeGroup>
+
+## Remember and recall
+
+```python
+import asyncio
+from plyra_memory import Memory
+
+async def main():
+    async with Memory(agent_id="my-agent") as mem:
+        # Write to memory
+        await mem.remember("User prefers async Python frameworks")
+        await mem.remember("The bug is in the conditional edge logic")
+
+        # Recall — fused search across all layers
+        result = await mem.recall("Python preferences")
+        for r in result.results:
+            print(f"[{r.layer.value}] {r.content}  score={r.score:.2f}")
+
+        # Context — token-budgeted string ready to inject into a prompt
+        ctx = await mem.context_for("what stack does the user prefer?")
+        print(ctx.content)
+        # → "[episodic] User prefers async Python frameworks (score: 0.94)"
+
+asyncio.run(main())
+```
+
+## Persistent across sessions
+
+The same `agent_id` retrieves memory from all previous sessions:
+
+```python
+# Session 1
+async with Memory(agent_id="support-agent") as mem:
+    await mem.remember("User is debugging a LangGraph state machine")
+
+# Session 2 — days later, new process
+async with Memory(agent_id="support-agent") as mem:
+    ctx = await mem.context_for("LangGraph issue")
+    print(ctx.content)
+    # → "[episodic] User is debugging a LangGraph state machine"
+```
+
+## Connect to a server
+
+To share memory across agents or enable multi-tenant isolation:
+
+```bash
+export PLYRA_SERVER_URL=https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io
+export PLYRA_API_KEY=plm_live_your_key_here
+```
+
+No code changes. The library detects these env vars and routes all operations to the server automatically.
+
+<Note>
+  Get your API key at [docs.plyra.dev/memory-server/api-keys](/memory-server/api-keys).
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="Memory layers" href="/memory/layers" icon="layers">
+    Understand working, episodic, and semantic storage.
+  </Card>
+  <Card title="Framework integrations" href="/memory/frameworks" icon="plug">
+    LangGraph, LangChain, AutoGen, CrewAI, and more.
+  </Card>
+</CardGroup>

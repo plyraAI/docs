@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 550">
+  <defs>
+    <style>
+      .box { stroke: #1e2a38; stroke-width: 2; fill: #141b24; }
+      .box-header { fill: #818cf8; }
+      .text-white { fill: #e0e7ff; font-family: monospace; font-size: 13px; }
+      .text-label { fill: #a5b4fc; font-family: system-ui; font-size: 12px; font-weight: 500; }
+      .arrow { stroke: #818cf8; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrow-label { fill: #a5b4fc; font-family: system-ui; font-size: 11px; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#818cf8" />
+    </marker>
+  </defs>
+
+  <text class="text-label" x="50" y="25">query: "what stack does this user prefer?"</text>
+  <path class="arrow" d="M 300,30 L 300,55" />
+
+  <rect class="box" x="200" y="55" width="200" height="50" rx="4" />
+  <text class="text-white" x="210" y="85">recall()</text>
+
+  <path class="arrow" d="M 300,105 L 300,135" />
+  <text class="arrow-label" x="250" y="130">searches all three layers</text>
+
+  <rect class="box" x="50" y="135" width="500" height="120" rx="4" />
+  <rect class="box-header" x="50" y="135" width="500" height="8" rx="4" />
+  <text class="text-white" x="60" y="160">Working layer    score = similarity</text>
+  <text class="text-white" x="60" y="185">Episodic layer   score = sim + recency</text>
+  <text class="text-white" x="60" y="210">Semantic layer   score = sim + importance</text>
+
+  <path class="arrow" d="M 300,255 L 300,280" />
+  <text class="arrow-label" x="250" y="275">fused & ranked</text>
+
+  <rect class="box" x="100" y="280" width="400" height="130" rx="4" />
+  <rect class="box-header" x="100" y="280" width="400" height="8" rx="4" />
+  <text class="text-white" x="110" y="310">RankedResult list</text>
+  <text class="text-white" x="110" y="335">[episodic] 0.94</text>
+  <text class="text-white" x="110" y="355">[semantic] 0.87</text>
+  <text class="text-white" x="110" y="375">[working]  0.71</text>
+
+  <path class="arrow" d="M 300,410 L 300,435" />
+  <text class="arrow-label" x="240" y="430">context_for() applies token budget</text>
+
+  <rect class="box" x="100" y="435" width="400" height="80" rx="4" />
+  <rect class="box-header" x="100" y="435" width="400" height="8" rx="4" />
+  <text class="text-white" x="110" y="465">ContextResult.content</text>
+  <text class="text-white" x="110" y="485">fits in your token_budget</text>
+</svg>
