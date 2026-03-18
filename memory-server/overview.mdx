@@ -1,0 +1,45 @@
+---
+title: "Overview"
+description: "Self-hosted memory server for multi-agent, multi-tenant deployments"
+icon: "server"
+---
+
+plyra-memory-server is a FastAPI service that exposes the plyra-memory library over HTTP. It adds API key authentication, workspace isolation, and multi-tenant support on top of the local library.
+
+<div style={{margin: '32px 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid #1e2a38'}}>
+  <img src="/images/memory-server-architecture.svg" alt="Plyra Memory Server Architecture" style={{width:'100%', background:'#0d1117'}} />
+</div>
+
+## What the server adds
+
+| Feature | Local library | With server |
+|---------|--------------|-------------|
+| Single-agent memory | ✅ | ✅ |
+| Multi-agent shared memory | ❌ | ✅ |
+| Multi-tenant isolation | ❌ | ✅ |
+| API key management | ❌ | ✅ |
+| Cross-process recall | Limited | ✅ |
+| Postgres backend | ❌ | ✅ |
+
+## Hosted instance
+
+Plyra runs a hosted instance you can use immediately:
+
+```
+https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io
+```
+
+Get an API key at [docs.plyra.dev/memory-server/api-keys](/memory-server/api-keys).
+
+## Self-host
+
+Run your own instance with Docker in 5 minutes — see the [quickstart](/memory-server/quickstart).
+
+<CardGroup cols={2}>
+  <Card title="Get an API key" href="/memory-server/api-keys" icon="key" color="#818cf8">
+    Generate a live key and start using the hosted instance.
+  </Card>
+  <Card title="Self-host" href="/memory-server/quickstart" icon="docker" color="#818cf8">
+    Run plyra-memory-server on your own infrastructure.
+  </Card>
+</CardGroup>

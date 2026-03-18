@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 400">
+  <defs>
+    <style>
+      .box { stroke: #1e2a38; stroke-width: 2; fill: #141b24; }
+      .box-header { fill: #818cf8; }
+      .text-white { fill: #e0e7ff; font-family: monospace; font-size: 13px; }
+      .text-label { fill: #a5b4fc; font-family: system-ui; font-size: 12px; font-weight: 500; }
+      .arrow { stroke: #818cf8; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+      .arrow-label { fill: #a5b4fc; font-family: system-ui; font-size: 11px; }
+    </style>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#818cf8" />
+    </marker>
+  </defs>
+
+  <rect class="box" x="50" y="30" width="120" height="60" rx="4" />
+  <text class="text-white" x="60" y="60">Your agent</text>
+
+  <path class="arrow" d="M 170,60 L 220,60" />
+  <text class="arrow-label" x="180" y="52">Bearer plm_live_...</text>
+
+  <rect class="box" x="220" y="20" width="420" height="80" rx="4" />
+  <rect class="box-header" x="220" y="20" width="420" height="8" rx="4" />
+  <text class="text-white" x="230" y="45">plyra-memory-server</text>
+  <text class="text-white" x="230" y="65">FastAPI · Azure</text>
+
+  <rect class="box" x="240" y="105" width="380" height="70" rx="4" />
+  <rect class="box-header" x="240" y="105" width="380" height="8" rx="4" />
+  <text class="text-white" x="250" y="130">Auth middleware</text>
+  <text class="text-white" x="250" y="150">API key → workspace</text>
+
+  <path class="arrow" d="M 430,175 L 430,210" />
+
+  <rect class="box" x="240" y="210" width="380" height="70" rx="4" />
+  <rect class="box-header" x="240" y="210" width="380" height="8" rx="4" />
+  <text class="text-white" x="250" y="235">plyra-memory lib</text>
+  <text class="text-white" x="250" y="255">local instance</text>
+
+  <path class="arrow" d="M 430,280 L 430,310" />
+
+  <g>
+    <rect class="box" x="50" y="310" width="110" height="70" rx="4" />
+    <text class="text-label" x="60" y="335">SQLite</text>
+    <text class="text-white" x="60" y="360">(default)</text>
+
+    <rect class="box" x="180" y="310" width="110" height="70" rx="4" />
+    <text class="text-label" x="190" y="335">ChromaDB</text>
+    <text class="text-white" x="190" y="360">(vectors)</text>
+
+    <rect class="box" x="310" y="310" width="110" height="70" rx="4" />
+    <text class="text-label" x="320" y="335">Postgres</text>
+    <text class="text-white" x="320" y="360">(optional)</text>
+  </g>
+
+  <path class="arrow" d="M 165,280 L 105,310" />
+  <path class="arrow" d="M 430,280 L 235,310" />
+  <path class="arrow" d="M 430,280 L 365,310" />
+</svg>

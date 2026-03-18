@@ -1,0 +1,287 @@
+---
+title: "API reference"
+description: "Complete plyra-memory-server REST API"
+icon: "code"
+---
+
+## Authentication
+
+All memory endpoints (prefixed `/v1/`) require an API key in the Authorization header:
+
+```
+Authorization: Bearer plm_live_your_key_here
+```
+
+The key is extracted and validated on every request. If invalid or missing:
+
+```json
+{
+  "detail": "Unauthorized",
+  "status": 401
+}
+```
+
+The API key determines the workspace — all responses are scoped to that workspace automatically.
+
+## Memory endpoints
+
+All memory endpoints are namespaced under `/v1/` and require a valid API key.
+
+### POST /v1/remember
+
+Write to all three memory layers.
+
+<ParamField path="agent_id" type="str" required>
+  Agent identifier.
+</ParamField>
+
+<ParamField path="content" type="str" required>
+  Memory content (1–8000 characters).
+</ParamField>
+
+<ParamField path="importance" type="float">
+  Importance score (0.0–1.0). Default: 0.5.
+</ParamField>
+
+<ParamField path="metadata" type="dict[str, Any]">
+  Custom metadata dictionary.
+</ParamField>
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "working": {
+      "id": "...",
+      "content": "...",
+      "importance": 0.5,
+      "created_at": "2025-03-18T..."
+    },
+    "episodic": {
+      "id": "...",
+      "content": "...",
+      "event": "agent_response",
+      "created_at": "2025-03-18T..."
+    },
+    "facts": []
+  }
+  ```
+</ResponseField>
+
+### POST /v1/recall
+
+Search across all three layers and return ranked results.
+
+<ParamField path="agent_id" type="str" required>
+  Agent identifier.
+</ParamField>
+
+<ParamField path="query" type="str" required>
+  Search query (1–500 characters).
+</ParamField>
+
+<ParamField path="top_k" type="int">
+  Maximum results (1–100). Default: 10.
+</ParamField>
+
+<ParamField path="layers" type="list[str]">
+  Filter to layers: "working", "episodic", "semantic". Default: all three.
+</ParamField>
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "query": "Python frameworks",
+    "results": [
+      {
+        "id": "...",
+        "layer": "episodic",
+        "content": "User prefers async Python",
+        "score": 0.94,
+        "similarity": 0.92,
+        "recency": 0.96,
+        "importance": 0.95,
+        "created_at": "2025-03-18T..."
+      }
+    ],
+    "total_found": 42,
+    "cache_hit": false,
+    "latency_ms": 45.2
+  }
+  ```
+</ResponseField>
+
+### POST /v1/context
+
+Build a token-budgeted context string.
+
+<ParamField path="agent_id" type="str" required>
+  Agent identifier.
+</ParamField>
+
+<ParamField path="query" type="str" required>
+  Search query.
+</ParamField>
+
+<ParamField path="token_budget" type="int">
+  Maximum tokens. Default: 2048.
+</ParamField>
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "query": "what does the user prefer?",
+    "content": "[EPISODIC] User prefers async Python (score: 0.94)\n[SEMANTIC] User PREFERS async Python (score: 0.87)",
+    "token_count": 28,
+    "token_budget": 500,
+    "memories_used": 2,
+    "cache_hit": false,
+    "latency_ms": 12.5
+  }
+  ```
+</ResponseField>
+
+### GET /v1/stats
+
+Get memory statistics for the current workspace.
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "workspace_id": "acme-corp",
+    "working_entries": 42,
+    "episodic_records": 1250,
+    "semantic_facts": 380,
+    "agents": ["support-agent", "sales-agent"],
+    "last_write": "2025-03-18T10:30:00Z"
+  }
+  ```
+</ResponseField>
+
+### DELETE /v1/memory
+
+Clear all working memory for an agent.
+
+<ParamField path="agent_id" type="str" required>
+  Agent identifier.
+</ParamField>
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "deleted": 23,
+    "agent_id": "support-agent"
+  }
+  ```
+</ResponseField>
+
+## Admin endpoints
+
+Admin endpoints require `PLYRA_ADMIN_API_KEY` instead of a regular API key.
+
+```
+Authorization: Bearer $PLYRA_ADMIN_API_KEY
+```
+
+### POST /admin/keys
+
+Create a new API key.
+
+<ParamField path="workspace_id" type="str" required>
+  Workspace identifier.
+</ParamField>
+
+<ParamField path="label" type="str" required>
+  Human-readable label for this key.
+</ParamField>
+
+<ParamField path="env" type="str">
+  Environment: "live" or "test". Default: "live".
+</ParamField>
+
+<ResponseField name="201" type="object">
+  ```json
+  {
+    "key": "plm_live_a3f9...",
+    "key_id": "key_01j...",
+    "workspace_id": "acme-corp",
+    "label": "production — support agent",
+    "created_at": "2025-03-18T10:00:00Z"
+  }
+  ```
+</ResponseField>
+
+<Warning>
+  The `key` field is returned only once. It is hashed server-side and cannot be retrieved again.
+</Warning>
+
+### GET /admin/keys/{workspace_id}
+
+List all keys for a workspace.
+
+<ResponseField name="200" type="array">
+  ```json
+  [
+    {
+      "key_id": "key_01j...",
+      "workspace_id": "acme-corp",
+      "label": "production — support agent",
+      "created_at": "2025-03-18T10:00:00Z",
+      "last_used": "2025-03-18T10:15:00Z"
+    }
+  ]
+  ```
+</ResponseField>
+
+### DELETE /admin/keys/{key_id}
+
+Revoke an API key. Revocation is instant.
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "revoked": true,
+    "key_id": "key_01j..."
+  }
+  ```
+</ResponseField>
+
+## Health endpoint
+
+### GET /health
+
+Server health and version info. **No authentication required.**
+
+<ResponseField name="200" type="object">
+  ```json
+  {
+    "status": "ok",
+    "version": "0.3.0",
+    "env": "production",
+    "uptime_seconds": 3600.5,
+    "database": "ok",
+    "vectors": "ok"
+  }
+  ```
+</ResponseField>
+
+## Error responses
+
+All errors return JSON with a `detail` field and appropriate HTTP status:
+
+| Status | Meaning |
+|--------|---------|
+| 400 | Bad request (invalid parameters) |
+| 401 | Unauthorized (missing/invalid API key) |
+| 403 | Forbidden (key doesn't have permission) |
+| 404 | Not found |
+| 429 | Rate limited |
+| 500 | Server error |
+
+Example error:
+
+```json
+{
+  "detail": "Invalid token",
+  "status": 401
+}
+```

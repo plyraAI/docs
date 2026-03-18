@@ -55,6 +55,48 @@
             "pages": ["guard/api-reference", "guard/changelog"]
           }
         ]
+      },
+      {
+        "tab": "Memory",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["memory/overview", "memory/quickstart"]
+          },
+          {
+            "group": "Core concepts",
+            "pages": ["memory/layers", "memory/retrieval", "memory/server-mode"]
+          },
+          {
+            "group": "Integrations",
+            "pages": ["memory/frameworks"]
+          },
+          {
+            "group": "Reference",
+            "pages": ["memory/api-reference"]
+          }
+        ]
+      },
+      {
+        "tab": "Memory Server",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": ["memory-server/overview", "memory-server/quickstart"]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "memory-server/api-keys",
+              "memory-server/isolation",
+              "memory-server/deploy"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": ["memory-server/api-reference"]
+          }
+        ]
       }
     ],
     "global": {

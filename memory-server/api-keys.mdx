@@ -1,0 +1,117 @@
+---
+title: "API keys"
+description: "Generate, manage, and rotate API keys for plyra-memory-server"
+icon: "key"
+---
+
+## Key format
+
+All plyra-memory API keys follow this format:
+
+```
+plm_live_<48 hex characters>   # production
+plm_test_<48 hex characters>   # development / testing
+```
+
+`plm` = plyra memory. The `live` / `test` prefix is informational — the server does not enforce different behaviour, but it helps you track which keys belong to which environment.
+
+## Generate a key
+
+<Card title="Generate your API key" icon="key" color="#818cf8" href="https://keys.plyra.dev">
+  Enter your email at **keys.plyra.dev** and receive a live API key instantly.
+  The key is shown once — store it in a secrets manager immediately.
+</Card>
+
+<Note>
+  keys.plyra.dev is a separate app that talks directly to the hosted
+  plyra-memory-server. The key it generates is ready to use immediately
+  with `PLYRA_API_KEY`.
+</Note>
+
+## Use your key
+
+```bash
+export PLYRA_SERVER_URL=https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io
+export PLYRA_API_KEY=plm_live_your_key_here
+```
+
+All API requests must include:
+
+```
+Authorization: Bearer plm_live_your_key_here
+```
+
+## Create keys via API
+
+For programmatic provisioning (CI/CD, customer onboarding):
+
+```bash
+curl -X POST https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io/admin/keys \
+  -H "Authorization: Bearer $PLYRA_ADMIN_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "workspace_id": "acme-corp",
+    "label": "production — support agent",
+    "env": "live"
+  }'
+```
+
+Response:
+
+```json
+{
+  "key": "plm_live_a3f9...",
+  "key_id": "key_01j...",
+  "workspace_id": "acme-corp",
+  "label": "production — support agent",
+  "created_at": "2025-03-18T10:00:00Z"
+}
+```
+
+<Warning>
+  The `key` field is returned **once**. It is hashed server-side and cannot be retrieved again. Copy it immediately.
+</Warning>
+
+## List keys for a workspace
+
+```bash
+curl https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io/admin/keys/acme-corp \
+  -H "Authorization: Bearer $PLYRA_ADMIN_KEY"
+```
+
+## Revoke a key
+
+Revocation is instant. The revoked key returns 401 on the next request.
+
+```bash
+curl -X DELETE https://plyra-memory-server.politedesert-a99b9eaf.centralindia.azurecontainerapps.io/admin/keys/{key_id} \
+  -H "Authorization: Bearer $PLYRA_ADMIN_KEY"
+```
+
+## Key rotation (zero-downtime)
+
+```bash
+# 1. Create a new key
+NEW_KEY=$(curl -X POST .../admin/keys \
+  -H "Authorization: Bearer $PLYRA_ADMIN_KEY" \
+  -d '{"workspace_id":"acme","label":"rotated"}' | jq -r .key)
+
+# 2. Update PLYRA_API_KEY in your deployment environment
+# 3. Redeploy agents
+# 4. Verify agents are using the new key
+# 5. Revoke the old key
+curl -X DELETE .../admin/keys/{old_key_id} \
+  -H "Authorization: Bearer $PLYRA_ADMIN_KEY"
+```
+
+## Security checklist
+
+<Warning>
+  **Never commit API keys to git.** Use environment variables or a secrets manager (Azure Key Vault, AWS Secrets Manager, Doppler).
+</Warning>
+
+* Use separate keys for dev, staging, and production
+* Create one key per agent or team for fine-grained revocation
+* Set `PLYRA_ADMIN_API_KEY` to a strong random value (32+ chars) before deployment
+* Revoke unused keys — they never expire automatically
+* Rotate keys after any suspected compromise

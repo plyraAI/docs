@@ -1,0 +1,106 @@
+---
+title: "Memory layers"
+description: "Working, episodic, and semantic memory — how each layer works"
+icon: "layers"
+---
+
+plyra-memory organises storage into three cognitive layers. Each serves a different purpose and uses different retrieval mechanics.
+
+## Working memory
+
+The current session scratchpad. Entries live in-memory and are written to SQLite for durability. Fast writes, no vector indexing overhead.
+
+```python
+# Working memory is written automatically by remember()
+await mem.remember("User asked about Q3 report")
+
+# Access the layer directly
+entries = await mem.working.get_entries(session_id=mem.session_id)
+```
+
+Working memory is flushed to episodic at session end:
+
+```python
+episodes = await mem.flush()  # Returns list[Episode] — one per flushed working entry
+```
+
+## Episodic memory
+
+The event timeline. Every working memory entry becomes an episodic record when flushed. Stored in SQLite with a ChromaDB vector index for semantic search.
+
+Episodic records carry:
+* `content` — the original text
+* `agent_id` — which agent stored it
+* `session_id` — which session it came from
+* `timestamp` — when it was stored
+* `importance` — float score (0.0–1.0), influences retrieval ranking
+
+Learn explicit facts directly into episodic:
+
+```python
+from plyra_memory import Episode, EpisodeEvent
+
+await mem.episodic.record(Episode(
+    agent_id=mem.agent_id,
+    session_id=mem.session_id,
+    event=EpisodeEvent.USER_MESSAGE,
+    content="User asked about scaling strategies"
+))
+```
+
+## Semantic memory
+
+The knowledge graph. Facts stored as subject–predicate–object triples. Deduplicated automatically — storing the same fact twice has no effect.
+
+```python
+from plyra_memory import Fact, FactRelation
+
+await mem.semantic.learn(Fact(
+    agent_id=mem.agent_id,
+    subject="user",
+    predicate=FactRelation.PREFERS,
+    object="async Python"
+))
+```
+
+### FactRelation values
+
+| Relation | Description |
+|----------|-------------|
+| `PREFERS` | Subject has a preference for the object |
+| `DISLIKES` | Subject dislikes the object |
+| `IS` | Subject is the object (identity) |
+| `IS_A` | Subject is a member of class object (taxonomy) |
+| `HAS` | Subject has the object as a property or possession |
+| `HAS_PROPERTY` | Subject has a specific property or attribute |
+| `KNOWS` | Subject is familiar with the object |
+| `USES` | Subject uses or employs the object |
+| `WORKS_ON` | Subject is working on or assigned to the object |
+| `LOCATED_IN` | Subject is located at or in the object |
+| `BELONGS_TO` | Subject is a member or part of the object |
+| `RELATED_TO` | Subject is related to the object (general) |
+| `REQUIRES` | Subject requires the object as a dependency |
+| `LEARNED_FROM` | Subject learned something from the object |
+| `CUSTOM` | Custom user-defined relation |
+
+## Layer storage
+
+| Layer | Structured store | Vector index |
+|-------|------------------|--------------|
+| Working | SQLite (in-memory first) | None |
+| Episodic | SQLite | ChromaDB |
+| Semantic | SQLite | ChromaDB |
+
+### Default paths
+
+```bash
+~/.plyra/memory.db      # SQLite
+~/.plyra/memory.index   # ChromaDB
+```
+
+### Override via env vars
+
+```bash
+export PLYRA_STORE_URL=~/.plyra/memory.db
+export PLYRA_VECTORS_URL=~/.plyra/memory.index
+```
