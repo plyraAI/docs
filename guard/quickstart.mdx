@@ -34,6 +34,7 @@ When the agent calls `delete_file`, plyra-guard intercepts first:
 ```python
 delete_file("/tmp/report.txt")   # Verdict: ALLOW — executes normally
 delete_file("/etc/passwd")       # Verdict: BLOCK — ExecutionBlockedError raised
+```
 
 <Note>
   `ExecutionBlockedError` carries three fields that explain exactly what
